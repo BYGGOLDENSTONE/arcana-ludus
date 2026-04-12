@@ -14,6 +14,7 @@
 - **Phase:** Phase 3 (Game Loop) complete → Ready for Phase 4 (Chains & Combos)
 - **Target:** Playable Steam Demo (Act I, full juice)
 - **Next Step:** Begin Phase 4 — Elemental chains, cross-element combos, numerological combos, scoring resolution order
+- **Upcoming:** Phase 4.5 — Placement Refactor (drag-drop → poker-style row-by-row click-select)
 
 ## Development Rules
 

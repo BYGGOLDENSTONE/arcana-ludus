@@ -15,6 +15,7 @@
 | **Phase 2** | Core Mechanics | Spread placement, upright/reversed, scoring engine |
 | **Phase 3** | Game Loop | Querent system, shop, run flow, lives |
 | **Phase 4** | Chains & Combos | Elemental chains, cross-element combos, numerological combos |
+| **Phase 4.5** | Placement Refactor | Row-by-row selection system (drag-drop → poker-style click-select) |
 | **Phase 5** | Veil & Talismans | Veil system, talisman framework, 17 talismans |
 | **Phase 6** | Juice & Polish | Scoring animations, shaders, particles, screen shake, SFX |
 | **Phase 7** | Content & Balance | All 62 demo cards tuned, boss querent, tutorial, Grimoire |
@@ -207,6 +208,92 @@ Chains and combos detected and scored. Scores now can reach exciting multiplied 
 
 ---
 
+## Phase 4.5 — Placement Refactor
+
+### Goal
+Replace drag-and-drop placement with a poker-style row-by-row click-select system. This is the core UX identity of the game — strategic card selection with tarot aesthetics hiding mathematical depth.
+
+### Design — Row-by-Row Selection
+
+**Flow:**
+```
+12 cards drawn to hand
+        │
+   ┌────▼──────────────────────────────┐
+   │  PAST ROW OPENS (3 slots)         │
+   │  Only Past slots visible/active    │
+   │  Player clicks cards to select     │
+   │  (selected cards scale up/glow)    │
+   │  Right-click to toggle reversed    │
+   │  "Place" button confirms           │
+   │  → Cards auto-place into Past row  │
+   │  → Row scores + bonuses shown      │
+   │  (9 cards remain in hand)          │
+   └────┬──────────────────────────────┘
+        │
+   ┌────▼──────────────────────────────┐
+   │  PRESENT ROW OPENS (3 slots)      │
+   │  Past cards visible (locked)       │
+   │  Same select → confirm flow        │
+   │  → Present scores + Past combos    │
+   │  (6 cards remain in hand)          │
+   └────┬──────────────────────────────┘
+        │
+   ┌────▼──────────────────────────────┐
+   │  FUTURE ROW OPENS (3 slots)       │
+   │  Past+Present visible (locked)     │
+   │  Select 3 from remaining 6         │
+   │  → FULL scoring: all combos fire   │
+   │  → Chains across rows resolve      │
+   │  → Final score revealed            │
+   │  (3 unused cards return to deck)   │
+   └──────────────────────────────────┘
+```
+
+**Key Design Rules:**
+- **No slot ordering** — selected cards auto-assign to slots (best match or left-to-right). No dragging, no slot picking. Keeps tempo fast like Balatro
+- **Click to select, click again to deselect** — up to 3 cards highlighted at a time per row
+- **Right-click to reverse** — before confirming, right-click toggles a selected card's orientation. Reversed state must be clearly shown (card tint, icon, label)
+- **Progressive reveal** — each row's scoring shows immediately after placement, building anticipation for Future
+- **Card info on hover** — Insight value, suit icon, position affinity hints always visible. Player makes informed mathematical decisions under tarot aesthetics
+- **Hand carries over** — after placing Past (3 used), 9 remain. After Present (3 more), 6 remain. After Future (3 more), 3 return to deck for next client
+
+### Tasks
+
+**4.5.1 Remove Drag-and-Drop System**
+- Remove drag logic from card.gd (keep click/select)
+- Remove drop detection from spread_slot.gd and spread_renderer.gd
+- Hand becomes a pure selection UI: click to toggle select (max 3)
+
+**4.5.2 Row Phase Manager**
+- New component or ReadingScene refactor: RowPhaseManager
+- Tracks current row phase: PAST → PRESENT → FUTURE → DONE
+- Controls which spread slots are visible/active
+- "Place" button: enabled when exactly 3 cards selected
+- After confirm: animate selected cards into current row slots, lock them, advance phase
+
+**4.5.3 Per-Row Scoring Display**
+- After each row is placed, run partial scoring for that row
+- Show per-card Insight, position match, chain previews
+- Accumulated score counter updates after each row
+- Future row triggers full combo resolution (chains, cross-element, numerological)
+
+**4.5.4 Card Selection UX**
+- Selected cards: scale up (current SELECTED_SCALE), gold glow border
+- Reversed indicator: clear visual on card (rotate 180° + "R" badge or tint)
+- Hover: show card tooltip with Insight, suit, affinity hints, reversed effect preview
+- Max 3 selected enforced — clicking a 4th card does nothing (or deselects oldest)
+
+**4.5.5 Adapt Scoring Engine**
+- ScoreManager must support partial row scoring (score 3 cards in context of already-placed cards)
+- Chain detection works across placed + current row
+- Final scoring on Future row triggers full resolution order
+
+### Deliverable
+Card placement feels like poker hand selection. Rows reveal progressively, each building on the last. Future row is the climax. No drag-and-drop.
+
+---
+
 ## Phase 5 — Veil & Talismans
 
 ### Goal
@@ -260,9 +347,10 @@ Make the game FEEL incredible. This is not optional polish — this is core game
 - Final score: celebration vs. failure animation
 
 **6.2 Card Shaders**
-- Card glow shader (parameterized color: gold/green/red/purple)
+- Card glow shader (parameterized color: gold/green/red)
 - Card hover parallax (subtle 3D tilt)
-- Reversed card aura (purple shimmer)
+- Reversed card visual: 180° rotation + clear "REVERSED" badge/indicator + dark tint/aura. Must be immediately obvious at a glance. Show reversed effect text on hover
+- Selected card glow (poker-style selection highlight)
 - Card placement "thunk" animation (scale bounce + shadow)
 - Card breathing idle animation
 
