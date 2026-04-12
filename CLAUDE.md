@@ -11,9 +11,9 @@
 - **Repo:** github.com/BYGGOLDENSTONE/arcana-ludus
 
 ## Current Phase
-- **Phase:** Pre-production complete → Ready for Phase 1 (Foundation)
+- **Phase:** Phase 1 (Foundation) complete → Ready for Phase 2 (Core Mechanics)
 - **Target:** Playable Steam Demo (Act I, full juice)
-- **Next Step:** Begin Phase 1 — project structure, autoloads, card data system, basic card rendering
+- **Next Step:** Begin Phase 2 — spread system, card placement, match detection, basic scoring engine
 
 ## Development Rules
 
@@ -126,7 +126,7 @@ res://
 - [x] Tarot card images downloaded (78 cards)
 - [x] Card meanings data downloaded
 - [x] Git repo created, initial commit pushed
-- [ ] Phase 1: Foundation
+- [x] Phase 1: Foundation
 - [ ] Phase 2: Core Mechanics
 - [ ] Phase 3: Game Loop
 - [ ] Phase 4: Chains & Combos

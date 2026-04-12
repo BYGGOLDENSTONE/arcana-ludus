@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="370" height="630" viewBox="0 0 370 630">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a0a3e"/>
+      <stop offset="50%" stop-color="#0d0520"/>
+      <stop offset="100%" stop-color="#1a0a3e"/>
+    </linearGradient>
+    <linearGradient id="goldG" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#d4a843"/>
+      <stop offset="50%" stop-color="#f0d68a"/>
+      <stop offset="100%" stop-color="#d4a843"/>
+    </linearGradient>
+    <radialGradient id="centerGlow" cx="50%" cy="50%" r="30%">
+      <stop offset="0%" stop-color="#3a1a6e" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#0d0520" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="370" height="630" rx="16" ry="16" fill="url(#bgGrad)"/>
+  <!-- Gold borders -->
+  <rect x="4" y="4" width="362" height="622" rx="14" ry="14" fill="none" stroke="url(#goldG)" stroke-width="2"/>
+  <rect x="12" y="12" width="346" height="606" rx="10" ry="10" fill="none" stroke="url(#goldG)" stroke-width="1" opacity="0.5"/>
+  <!-- Inner decorative border -->
+  <rect x="24" y="24" width="322" height="582" rx="8" ry="8" fill="none" stroke="url(#goldG)" stroke-width="0.5" opacity="0.3"/>
+  <!-- Center glow -->
+  <rect width="370" height="630" rx="16" ry="16" fill="url(#centerGlow)"/>
+  <!-- Central eye motif -->
+  <g transform="translate(185, 315)">
+    <!-- Eye outer shape -->
+    <ellipse cx="0" cy="0" rx="60" ry="30" fill="none" stroke="url(#goldG)" stroke-width="1.5" opacity="0.8"/>
+    <!-- Iris -->
+    <circle cx="0" cy="0" r="18" fill="none" stroke="url(#goldG)" stroke-width="1.2" opacity="0.7"/>
+    <!-- Pupil -->
+    <circle cx="0" cy="0" r="8" fill="url(#goldG)" opacity="0.5"/>
+    <!-- Inner pupil -->
+    <circle cx="0" cy="0" r="3" fill="#0d0520"/>
+    <!-- Rays from eye -->
+    <line x1="0" y1="-35" x2="0" y2="-55" stroke="url(#goldG)" stroke-width="0.8" opacity="0.4"/>
+    <line x1="0" y1="35" x2="0" y2="55" stroke="url(#goldG)" stroke-width="0.8" opacity="0.4"/>
+    <line x1="65" y1="0" x2="85" y2="0" stroke="url(#goldG)" stroke-width="0.8" opacity="0.4"/>
+    <line x1="-65" y1="0" x2="-85" y2="0" stroke="url(#goldG)" stroke-width="0.8" opacity="0.4"/>
+    <!-- Diagonal rays -->
+    <line x1="42" y1="-24" x2="56" y2="-40" stroke="url(#goldG)" stroke-width="0.6" opacity="0.3"/>
+    <line x1="-42" y1="-24" x2="-56" y2="-40" stroke="url(#goldG)" stroke-width="0.6" opacity="0.3"/>
+    <line x1="42" y1="24" x2="56" y2="40" stroke="url(#goldG)" stroke-width="0.6" opacity="0.3"/>
+    <line x1="-42" y1="24" x2="-56" y2="40" stroke="url(#goldG)" stroke-width="0.6" opacity="0.3"/>
+  </g>
+  <!-- Moon crescent top -->
+  <g transform="translate(185, 120)">
+    <path d="M0,-25 A25,25 0 0,1 0,25 A18,18 0 0,0 0,-25" fill="url(#goldG)" opacity="0.4"/>
+  </g>
+  <!-- Star bottom -->
+  <g transform="translate(185, 510)">
+    <polygon points="0,-20 5,-8 18,-8 8,1 12,14 0,7 -12,14 -8,1 -18,-8 -5,-8" fill="url(#goldG)" opacity="0.4"/>
+  </g>
+  <!-- Corner stars -->
+  <g transform="translate(45, 50) scale(0.4)">
+    <polygon points="0,-20 5,-8 18,-8 8,1 12,14 0,7 -12,14 -8,1 -18,-8 -5,-8" fill="url(#goldG)" opacity="0.3"/>
+  </g>
+  <g transform="translate(325, 50) scale(0.4)">
+    <polygon points="0,-20 5,-8 18,-8 8,1 12,14 0,7 -12,14 -8,1 -18,-8 -5,-8" fill="url(#goldG)" opacity="0.3"/>
+  </g>
+  <g transform="translate(45, 580) scale(0.4)">
+    <polygon points="0,-20 5,-8 18,-8 8,1 12,14 0,7 -12,14 -8,1 -18,-8 -5,-8" fill="url(#goldG)" opacity="0.3"/>
+  </g>
+  <g transform="translate(325, 580) scale(0.4)">
+    <polygon points="0,-20 5,-8 18,-8 8,1 12,14 0,7 -12,14 -8,1 -18,-8 -5,-8" fill="url(#goldG)" opacity="0.3"/>
+  </g>
+</svg>

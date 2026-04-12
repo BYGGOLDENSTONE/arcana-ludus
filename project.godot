@@ -10,13 +10,27 @@ config_version=5
 
 [application]
 
-config/name="tarot"
+config/name="Arcana Ludus"
+run/main_scene="res://scenes/shared/test_scene.tscn"
 config/features=PackedStringArray("4.6", "Forward Plus")
 config/icon="res://icon.svg"
 
-[physics]
+[autoload]
 
-3d/physics_engine="Jolt Physics"
+EventBus="*res://scripts/autoload/event_bus.gd"
+DataLoader="*res://scripts/autoload/data_loader.gd"
+GameManager="*res://scripts/autoload/game_manager.gd"
+DeckManager="*res://scripts/autoload/deck_manager.gd"
+ScoreManager="*res://scripts/autoload/score_manager.gd"
+VeilManager="*res://scripts/autoload/veil_manager.gd"
+AudioManager="*res://scripts/autoload/audio_manager.gd"
+
+[display]
+
+window/size/viewport_width=1920
+window/size/viewport_height=1080
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
 
 [rendering]
 
