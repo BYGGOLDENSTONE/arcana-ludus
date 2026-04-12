@@ -9,12 +9,13 @@ signal drag_ended(card: Node2D)
 signal hovered(card: Node2D)
 signal unhovered(card: Node2D)
 
-const HOVER_SCALE := Vector2(1.08, 1.08)
-const SELECTED_SCALE := Vector2(1.12, 1.12)
-const NORMAL_SCALE := Vector2.ONE
+## Card size: 350x600 original
+## At NORMAL_SCALE 0.50 → 175x300 rendered pixels
+## At SELECTED_SCALE 0.75 → 262x450 rendered pixels
+const NORMAL_SCALE := Vector2(0.50, 0.50)
+const SELECTED_SCALE := Vector2(0.75, 0.75)
 const DRAG_OPACITY := 0.85
 const FLIP_DURATION := 0.4
-const SELECTED_LIFT := -80.0
 const DRAG_THRESHOLD := 8.0
 
 const CardDataScript = preload("res://scripts/resources/card_data.gd")
@@ -45,6 +46,7 @@ var _mouse_pressed: bool = false
 
 
 func _ready() -> void:
+	scale = NORMAL_SCALE
 	hover_area.mouse_entered.connect(_on_mouse_entered)
 	hover_area.mouse_exited.connect(_on_mouse_exited)
 	if select_glow:
@@ -61,26 +63,21 @@ func _update_visuals() -> void:
 	if not card_data:
 		return
 
-	# Load card image
 	var texture := load(card_data.texture_path) as Texture2D
 	if texture and card_image:
 		card_image.texture = texture
 
-	# Update labels
 	if name_label:
 		name_label.text = card_data.card_name
 	if value_label:
 		value_label.text = str(card_data.base_insight)
 
-	# Reversed indicator
 	if reversed_indicator:
 		reversed_indicator.visible = is_reversed
 
-	# Rotate visual for reversed
 	if card_visual:
 		card_visual.rotation = PI if is_reversed else 0.0
 
-	# Show/hide front/back
 	_update_face_visibility()
 
 
@@ -119,7 +116,6 @@ func deselect() -> void:
 
 
 func flip_orientation() -> void:
-	## Toggle between upright and reversed with animation.
 	var tween := create_tween()
 	tween.set_ease(Tween.EASE_IN_OUT)
 	tween.set_trans(Tween.TRANS_SINE)
@@ -132,7 +128,6 @@ func flip_orientation() -> void:
 
 
 func reveal() -> void:
-	## Flip from back to front.
 	if is_face_up:
 		return
 	var tween := create_tween()
@@ -147,7 +142,6 @@ func reveal() -> void:
 
 
 func hide_card() -> void:
-	## Flip from front to back.
 	if not is_face_up:
 		return
 	var tween := create_tween()
@@ -185,7 +179,6 @@ func _input(event: InputEvent) -> void:
 					if is_dragging:
 						_end_drag()
 					elif distance < DRAG_THRESHOLD:
-						# Click — toggle selection
 						if is_selected:
 							deselect()
 						else:
@@ -234,21 +227,11 @@ func _return_to_hand() -> void:
 
 func _on_mouse_entered() -> void:
 	is_hovered = true
-	if not is_dragging and not is_selected:
-		var tween := create_tween()
-		tween.set_ease(Tween.EASE_OUT)
-		tween.set_trans(Tween.TRANS_CUBIC)
-		tween.tween_property(self, "scale", HOVER_SCALE, 0.15)
 	hovered.emit(self)
 	EventBus.card_hovered.emit(self)
 
 
 func _on_mouse_exited() -> void:
 	is_hovered = false
-	if not is_dragging and not is_selected:
-		var tween := create_tween()
-		tween.set_ease(Tween.EASE_OUT)
-		tween.set_trans(Tween.TRANS_CUBIC)
-		tween.tween_property(self, "scale", NORMAL_SCALE, 0.15)
 	unhovered.emit(self)
 	EventBus.card_unhovered.emit(self)

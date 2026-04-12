@@ -12,10 +12,11 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 offset_right = 1920.0
 offset_bottom = 1080.0
+mouse_filter = 2
 color = Color(0.06, 0.02, 0.12, 1)
 
 [node name="Hand" parent="." instance=ExtResource("2_hand")]
-position = Vector2(960, 900)
+position = Vector2(960, 1030)
 
 [node name="UI" type="CanvasLayer" parent="."]
 

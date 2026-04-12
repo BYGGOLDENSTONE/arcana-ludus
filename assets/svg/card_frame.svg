@@ -1,31 +1,22 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="370" height="630" viewBox="0 0 370 630">
   <defs>
-    <linearGradient id="frameGrad" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#2a1a4e"/>
-      <stop offset="50%" stop-color="#1a0a3e"/>
-      <stop offset="100%" stop-color="#2a1a4e"/>
-    </linearGradient>
     <linearGradient id="goldGrad" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="#d4a843"/>
       <stop offset="50%" stop-color="#f0d68a"/>
       <stop offset="100%" stop-color="#d4a843"/>
     </linearGradient>
   </defs>
-  <!-- Outer frame -->
-  <rect x="0" y="0" width="370" height="630" rx="16" ry="16" fill="url(#frameGrad)"/>
   <!-- Gold border outer -->
-  <rect x="4" y="4" width="362" height="622" rx="14" ry="14" fill="none" stroke="url(#goldGrad)" stroke-width="2"/>
+  <rect x="0" y="0" width="370" height="630" rx="16" ry="16" fill="none" stroke="url(#goldGrad)" stroke-width="3"/>
   <!-- Gold border inner -->
-  <rect x="10" y="10" width="350" height="610" rx="12" ry="12" fill="none" stroke="url(#goldGrad)" stroke-width="1" opacity="0.6"/>
-  <!-- Card image cutout area (transparent) -->
-  <rect x="18" y="50" width="334" height="500" rx="6" ry="6" fill="none" stroke="url(#goldGrad)" stroke-width="1" opacity="0.4"/>
+  <rect x="6" y="6" width="358" height="618" rx="12" ry="12" fill="none" stroke="url(#goldGrad)" stroke-width="1" opacity="0.6"/>
   <!-- Corner ornaments -->
-  <circle cx="26" cy="26" r="4" fill="url(#goldGrad)" opacity="0.8"/>
-  <circle cx="344" cy="26" r="4" fill="url(#goldGrad)" opacity="0.8"/>
-  <circle cx="26" cy="604" r="4" fill="url(#goldGrad)" opacity="0.8"/>
-  <circle cx="344" cy="604" r="4" fill="url(#goldGrad)" opacity="0.8"/>
+  <circle cx="20" cy="20" r="3" fill="url(#goldGrad)" opacity="0.8"/>
+  <circle cx="350" cy="20" r="3" fill="url(#goldGrad)" opacity="0.8"/>
+  <circle cx="20" cy="610" r="3" fill="url(#goldGrad)" opacity="0.8"/>
+  <circle cx="350" cy="610" r="3" fill="url(#goldGrad)" opacity="0.8"/>
   <!-- Top center ornament -->
-  <path d="M175 14 L185 28 L175 24 L165 28 Z" fill="url(#goldGrad)" opacity="0.7"/>
+  <path d="M185 8 L192 18 L185 15 L178 18 Z" fill="url(#goldGrad)" opacity="0.7"/>
   <!-- Bottom center ornament -->
-  <path d="M175 616 L185 602 L175 606 L165 602 Z" fill="url(#goldGrad)" opacity="0.7"/>
+  <path d="M185 622 L192 612 L185 615 L178 612 Z" fill="url(#goldGrad)" opacity="0.7"/>
 </svg>
