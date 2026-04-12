@@ -1,5 +1,9 @@
 extends Node2D
-## Main gameplay scene: draw hand, place cards in 3×3 spread, trigger reading.
+## Gameplay scene: draw hand from DeckManager, place cards in 3x3 spread, score.
+## Implements Phase 3 — refactored to work within the Night/Run flow.
+## Called by GameScene; does NOT create its own deck.
+
+signal reading_finished(score: int, target: int)
 
 const CARD_SCENE := preload("res://components/card/card.tscn")
 const SpreadDataScript = preload("res://scripts/resources/spread_data.gd")
@@ -12,9 +16,12 @@ const HAND_SIZE := 12
 @onready var target_label: Label = $UI/TargetLabel
 @onready var info_label: Label = $UI/InfoLabel
 @onready var placed_count_label: Label = $UI/PlacedCountLabel
+@onready var querent_info_label: Label = $UI/QuerentInfoLabel
 
 var _reading_active: bool = false
 var _scoring_done: bool = false
+var _current_querent: Resource = null
+var _hand_card_data: Array = []  # CardData resources drawn from DeckManager
 
 
 func _ready() -> void:
@@ -29,25 +36,31 @@ func _ready() -> void:
 
 	spread.card_placed.connect(_on_spread_card_placed)
 
-	_setup_reading()
+	# Hide until start_reading is called
+	visible = false
 
 
-func _setup_reading() -> void:
+func start_reading(querent: Resource) -> void:
+	_current_querent = querent
 	_reading_active = true
 	_scoring_done = false
+	visible = true
 
-	# Clear previous reading's cards from spread
+	# Clear previous reading
 	spread.clear_all_cards()
 
-	# Create the standard 3×3 spread
+	# Create the standard 3x3 spread
 	var spread_data: Resource = SpreadDataScript.create_standard_spread()
 	spread.setup(spread_data)
 
-	# Set a target score (placeholder — will come from querent system in Phase 3)
-	ScoreManager.set_target(300)
+	# Set target from querent
+	ScoreManager.set_target(querent.target_score)
 	_update_target_display()
 
-	# Draw hand from deck
+	# Display querent info
+	_update_querent_display()
+
+	# Draw hand from DeckManager
 	_draw_hand()
 
 	score_label.text = "Score: 0"
@@ -59,23 +72,32 @@ func _setup_reading() -> void:
 
 func _draw_hand() -> void:
 	hand.clear_hand()
+	_hand_card_data.clear()
 
-	var all_cards: Array = DataLoader.get_demo_deck()
-	if all_cards.is_empty():
-		info_label.text = "No cards loaded!"
+	var drawn_cards: Array = DeckManager.draw(HAND_SIZE)
+	if drawn_cards.is_empty():
+		info_label.text = "No cards to draw!"
 		return
 
-	all_cards.shuffle()
-	var draw_count := mini(HAND_SIZE, all_cards.size())
+	_hand_card_data = drawn_cards
 
-	for i in range(draw_count):
+	for card_data in drawn_cards:
 		var card_instance: Node2D = CARD_SCENE.instantiate()
 		hand.add_card(card_instance)
-		card_instance.setup(all_cards[i])
+		card_instance.setup(card_data)
+
+
+func _update_querent_display() -> void:
+	if not _current_querent or not querent_info_label:
+		return
+	querent_info_label.text = "%s | %s | %s" % [
+		_current_querent.querent_name,
+		_current_querent.question_theme.capitalize(),
+		_current_querent.personality_type.capitalize(),
+	]
 
 
 func _on_card_placed_on_spread(card: Node, _slot: Node) -> void:
-	# Remove card from hand tracking
 	hand.remove_card(card)
 	_update_placed_count()
 
@@ -91,8 +113,7 @@ func _on_all_slots_filled() -> void:
 
 func _on_read_pressed() -> void:
 	if _scoring_done:
-		# Reset for next reading
-		_setup_reading()
+		# Scoring already shown; this press is handled by GameScene via signal
 		return
 
 	read_button.disabled = true
@@ -107,27 +128,54 @@ func _on_read_pressed() -> void:
 	var met := ScoreManager.is_target_met()
 
 	if met:
-		info_label.text = "Reading complete! Score %d / %d — SUCCESS! Gold earned." % [total, target]
+		info_label.text = "Reading complete! Score %d / %d -- SUCCESS!" % [total, target]
 	else:
-		info_label.text = "Reading complete! Score %d / %d — Not enough..." % [total, target]
+		info_label.text = "Reading complete! Score %d / %d -- Not enough..." % [total, target]
 
-	# Show per-card breakdown
 	_show_score_breakdown()
-
 	_scoring_done = true
-	read_button.text = "Next Reading"
-	read_button.disabled = false
+
+	# Return unused hand cards to draw pile, discard placed cards
+	_return_cards_to_deck()
+
+	# Notify parent that reading is done
+	reading_finished.emit(total, target)
+
+
+func _return_cards_to_deck() -> void:
+	# Collect card_data from cards still in hand
+	var unused_data: Array = []
+	for card_node in hand.cards.duplicate():
+		if card_node.card_data:
+			unused_data.append(card_node.card_data)
+	DeckManager.return_to_deck(unused_data)
+
+	# Collect card_data from placed cards and discard them
+	var placed_data: Array = []
+	var placed_cards: Array = spread.get_placed_cards()
+	for entry in placed_cards:
+		var card_node: Node2D = entry.card
+		if card_node.card_data:
+			placed_data.append(card_node.card_data)
+	DeckManager.discard_placed(placed_data)
+
+
+func cleanup() -> void:
+	## Clean up the reading scene so it can be reused or freed.
+	spread.clear_all_cards()
+	hand.clear_hand()
+	_hand_card_data.clear()
+	_current_querent = null
+	visible = false
 
 
 func _show_score_breakdown() -> void:
 	var breakdown: Array = ScoreManager.get_score_breakdown()
 	for entry in breakdown:
 		var card: Node = entry.card
-		if card.has_method("get") or true:
-			# Update the value label on the card to show actual score
-			var value_label: Label = card.get_node_or_null("CardVisual/CardFront/ValueLabel")
-			if value_label:
-				value_label.text = "%d" % entry.total
+		var value_lbl: Label = card.get_node_or_null("CardVisual/CardFront/ValueLabel")
+		if value_lbl:
+			value_lbl.text = "%d" % entry.total
 
 
 func _update_placed_count() -> void:

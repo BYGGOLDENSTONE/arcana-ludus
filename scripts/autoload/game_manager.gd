@@ -9,6 +9,9 @@ var current_querent_index: int = 0
 var lives: int = 3
 var max_lives: int = 3
 var gold: int = 0
+var current_night: int = 1
+var reputation: float = 1.0
+var removal_count: int = 0
 
 
 func start_new_run() -> void:
@@ -17,6 +20,9 @@ func start_new_run() -> void:
 	current_querent_index = 0
 	lives = max_lives
 	gold = 0
+	current_night = 1
+	reputation = 1.0
+	removal_count = 0
 	EventBus.run_started.emit()
 
 
@@ -29,3 +35,27 @@ func lose_life() -> void:
 	lives -= 1
 	if lives <= 0:
 		end_run(false)
+
+
+func advance_night() -> void:
+	current_night += 1
+	current_querent_index = 0
+	EventBus.night_started.emit(current_night)
+
+
+func modify_reputation(amount: float) -> void:
+	reputation = clampf(reputation + amount, 0.5, 1.5)
+
+
+func earn_gold(amount: int) -> void:
+	var earned := int(amount * reputation)
+	gold += earned
+	EventBus.gold_changed.emit(gold)
+
+
+func spend_gold(amount: int) -> bool:
+	if gold < amount:
+		return false
+	gold -= amount
+	EventBus.gold_changed.emit(gold)
+	return true

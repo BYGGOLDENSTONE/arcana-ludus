@@ -62,7 +62,7 @@ func _create_row_labels() -> void:
 			(row - 1) * SLOT_SPACING.y - 8
 		)
 		label.add_theme_font_size_override("font_size", 14)
-		label.add_theme_color_override("font_color", Color(0.7, 0.6, 0.9, 0.7))
+		label.add_theme_color_override("font_color", Color(0.78, 0.70, 0.50, 0.7))
 		row_label_container.add_child(label)
 
 

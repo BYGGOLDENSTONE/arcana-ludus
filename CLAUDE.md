@@ -11,9 +11,9 @@
 - **Repo:** github.com/BYGGOLDENSTONE/arcana-ludus
 
 ## Current Phase
-- **Phase:** Phase 2 (Core Mechanics) complete → Ready for Phase 3 (Game Loop)
+- **Phase:** Phase 3 (Game Loop) complete → Ready for Phase 4 (Chains & Combos)
 - **Target:** Playable Steam Demo (Act I, full juice)
-- **Next Step:** Begin Phase 3 — Night system, querent/client flow, deck management, shop
+- **Next Step:** Begin Phase 4 — Elemental chains, cross-element combos, numerological combos, scoring resolution order
 
 ## Development Rules
 
@@ -29,7 +29,7 @@
 - **Card images:** Use downloaded RWS JPGs from `assets/cards/original/` (public domain 1909 art)
 - **All other visuals:** Generate as SVG — card frames, card backs, UI elements, icons, talisman icons, spread backgrounds, Veil eye, particles
 - **Do NOT use the name "Rider-Waite"** — it's trademarked. Use "classic tarot" or the game's own deck name
-- **Color palette:** Deep purples, midnight blues, gold accents, candlelight warmth
+- **Color palette:** Deep midnight blues/navy, gold/amber accents, candlelight warmth (no purple)
 - **Typography:** Serif for card names (mystical), sans-serif for numbers/UI (readability)
 
 ### Design Rules
@@ -58,13 +58,22 @@
 ## Architecture
 
 ### Autoload Singletons (7)
-- `GameManager` — run state, current act/querent, lives
-- `DeckManager` — player deck, draw pile, discard, hand
+- `GameManager` — run state, current act/querent, lives, gold, reputation, night tracking
+- `DeckManager` — player deck, draw pile, discard, hand, sideboard (removed cards still owned)
 - `ScoreManager` — scoring engine, combo detection
 - `VeilManager` — Veil counter, tier tracking
-- `DataLoader` — loads card/spread/talisman definitions
+- `DataLoader` — loads card/spread/talisman/querent definitions
 - `AudioManager` — SFX and music bus management
 - `EventBus` — global signal bus for cross-component communication
+
+### Key Managers
+- `NightManager` (scripts/managers/) — orchestrates night flow: querent generation → reading → result → next querent or night end
+
+### Key Resources
+- `CardData` (scripts/resources/) — card properties, from_dict()
+- `SpreadData` / `SpreadPositionData` — spread layout definitions
+- `QuerentData` (scripts/resources/) — client properties, from_dict()
+- `QuerentGenerator` (scripts/utils/) — procedural querent generation with night-scaled difficulty
 
 ### Project Structure
 ```
@@ -110,13 +119,17 @@ res://
 - `assets/data/tarot-images.json` — Card name → image filename mapping
 - `assets/data/tarot.json` — Basic card metadata (name, number, suit)
 
-## Core Loop — Night System
-- **1 Night = 1 Round** — Player serves clients until deck runs out
+## Core Loop — Night System (Implemented)
+- **1 Night = 1 Round** — Player serves clients; night ends by player choice (after min clients) or when deck runs out
 - **3×3 Spread** — 9 positions (Past/Present/Future × 3), all readings use this layout
 - **Hand:** Draw 12 cards per client, place 9, unused return to deck
-- **Starting deck:** ~30 cards (22 Major Arcana + 8-10 Minor Arcana)
-- **Reputation:** Rejecting/failing clients lowers reputation → less gold
-- **Escalation:** Later nights have harder clients with higher target scores
+- **Starting deck:** 22 Major Arcana. Minor Arcana acquired through shop
+- **Reputation:** Rejecting/failing clients lowers reputation → less gold earned (0.5x–1.5x multiplier)
+- **Escalation:** Target scores scale by night number (~120 + night×100), small variance within a night
+- **Gold scaling:** Base reward + 10% of score exceeding target as bonus gold
+- **Night end:** After min querents (3+night), Reject becomes "End the Night". Player can continue or stop
+- **Shop between nights:** Card packs (buy Minor Arcana), deck management (remove/return via sideboard)
+- **Scenes:** GameScene (main entry) → ReadingScene (card placement) → ShopScene (between nights)
 
 ## Demo Scope
 - 62 cards (22 Major Arcana + 40 Minor Arcana Ace-10, no Court cards)
@@ -136,7 +149,7 @@ res://
 - [x] Git repo created, initial commit pushed
 - [x] Phase 1: Foundation
 - [x] Phase 2: Core Mechanics
-- [ ] Phase 3: Game Loop
+- [x] Phase 3: Game Loop
 - [ ] Phase 4: Chains & Combos
 - [ ] Phase 5: Veil & Talismans
 - [ ] Phase 6: Juice & Polish

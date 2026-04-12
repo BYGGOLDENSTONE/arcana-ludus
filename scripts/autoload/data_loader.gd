@@ -72,3 +72,11 @@ func get_demo_deck() -> Array:
 	for card in _cards.values():
 		result.append(card)
 	return result
+
+
+func get_starting_deck() -> Array:
+	var result: Array = []
+	for card in _cards.values():
+		if card.card_type == "major_arcana":
+			result.append(card)
+	return result
