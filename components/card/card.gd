@@ -10,10 +10,10 @@ signal hovered(card: Node2D)
 signal unhovered(card: Node2D)
 
 ## Card size: 350x600 original
-## At NORMAL_SCALE 0.50 → 175x300 rendered pixels
-## At SELECTED_SCALE 0.75 → 262x450 rendered pixels
-const NORMAL_SCALE := Vector2(0.50, 0.50)
-const SELECTED_SCALE := Vector2(0.75, 0.75)
+## At NORMAL_SCALE 0.30 → 105x180 rendered pixels
+## At SELECTED_SCALE 0.38 → 133x228 rendered pixels
+const NORMAL_SCALE := Vector2(0.30, 0.30)
+const SELECTED_SCALE := Vector2(0.38, 0.38)
 const DRAG_OPACITY := 0.85
 const FLIP_DURATION := 0.4
 const DRAG_THRESHOLD := 8.0
@@ -215,7 +215,11 @@ func _end_drag() -> void:
 	modulate.a = 1.0
 	drag_ended.emit(self)
 	EventBus.card_drag_ended.emit(self, global_position)
-	_return_to_hand()
+	# If not placed on a spread slot, return to hand.
+	# SpreadRenderer handles placement via EventBus.card_drag_ended.
+	# It sets is_in_hand = false when placed successfully.
+	if is_in_hand:
+		_return_to_hand()
 
 
 func _return_to_hand() -> void:

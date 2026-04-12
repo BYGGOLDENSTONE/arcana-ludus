@@ -60,60 +60,102 @@ You are a tarot reader receiving clients (querents) through the night. Each read
 
 ---
 
-## 2. Core Loop
+## 2. Core Loop — The Night System
+
+The player is a tarot reader working through the night. Each night, clients arrive seeking readings. The night ends when the deck runs out.
 
 ```
-┌─────────────────────────────────────────────┐
-│              QUERENT ARRIVES                 │
-│  Question theme → determines suit bonuses   │
-│  Personality → modifies rules               │
-│  Target score → must beat to proceed        │
-└──────────────────┬──────────────────────────┘
-                   ▼
-┌─────────────────────────────────────────────┐
-│            CHOOSE SPREAD                    │
-│  3-Card (safe) → Celtic Cross (high risk)   │
-│  Spread choice affects position count,      │
-│  score ceiling, and available bonuses       │
-└──────────────────┬──────────────────────────┘
-                   ▼
-┌─────────────────────────────────────────────┐
-│           PLACE CARDS                       │
-│  Draw hand → place onto spread positions    │
-│  For each card:                             │
-│    • Choose position (meaning match?)       │
-│    • Choose orientation (upright/reversed?)  │
-│    • Consider suit chains & combos          │
-│    • Watch Veil accumulation                │
-└──────────────────┬──────────────────────────┘
-                   ▼
-┌─────────────────────────────────────────────┐
-│           THE READING (Scoring)             │
-│  Cards resolve left-to-right:               │
-│    1. Base Insight calculated               │
-│    2. Position match bonus applied          │
-│    3. Suit chain multipliers trigger        │
-│    4. Elemental combos fire                 │
-│    5. Talisman effects activate             │
-│    6. Veil bonuses/penalties applied        │
-│    7. Final score revealed                  │
-│  ★ FULL VISUAL SPECTACLE ★                 │
-└──────────────────┬──────────────────────────┘
-                   ▼
-┌─────────────────────────────────────────────┐
-│           QUERENT RESULT                    │
-│  Beat target? → Reward (gold/talisman/card) │
-│  Failed? → Lose a life (3 lives per run)   │
-└──────────────────┬──────────────────────────┘
-                   ▼
-┌─────────────────────────────────────────────┐
-│              SHOP PHASE                     │
-│  Buy/sell cards, acquire talismans,         │
-│  remove cards, upgrade deck                 │
-└──────────────────┬──────────────────────────┘
-                   ▼
-            Next Querent...
+              ☽ NIGHT BEGINS ☾
+         Deck ready (~30 cards to start)
+                    │
+    ┌───────────────▼────────────────┐
+    │        CLIENT ARRIVES          │◄─────────────┐
+    │  Question theme → suit bonuses │              │
+    │  Target score → must beat      │              │
+    │  Reward → gold on success      │              │
+    └───────────────┬────────────────┘              │
+                    ▼                               │
+    ┌────────────────────────────────┐              │
+    │  ACCEPT or REJECT client       │              │
+    │  Reject → no cards spent,      │              │
+    │  but reputation drops          │              │
+    └───────────────┬────────────────┘              │
+                    ▼                               │
+    ┌────────────────────────────────┐              │
+    │  DRAW HAND (10-12 cards)       │              │
+    └───────────────┬────────────────┘              │
+                    ▼                               │
+    ┌────────────────────────────────┐              │
+    │  PLACE CARDS — 3×3 SPREAD      │              │
+    │  ┌──────┬──────┬──────┐       │              │
+    │  │ PAST │ PAST │ PAST │       │              │
+    │  ├──────┼──────┼──────┤       │              │
+    │  │ PRES │ PRES │ PRES │       │              │
+    │  ├──────┼──────┼──────┤       │              │
+    │  │ FUT  │ FUT  │ FUT  │       │              │
+    │  └──────┴──────┴──────┘       │              │
+    │  9 cards placed, rest return   │              │
+    │  to deck. For each card:       │              │
+    │    • Choose position (match?)  │              │
+    │    • Choose orientation         │              │
+    │    • Consider suit chains       │              │
+    │    • Watch Veil accumulation    │              │
+    └───────────────┬────────────────┘              │
+                    ▼                               │
+    ┌────────────────────────────────┐              │
+    │  THE READING (Scoring)         │              │
+    │  Cards resolve left→right,     │              │
+    │  top→bottom:                   │              │
+    │    1. Base Insight              │              │
+    │    2. Position match bonus      │              │
+    │    3. Suit chain multipliers    │              │
+    │    4. Elemental combos          │              │
+    │    5. Talisman effects          │              │
+    │    6. Veil modifiers            │              │
+    │    7. Final score revealed      │              │
+    │  ★ FULL VISUAL SPECTACLE ★     │              │
+    └───────────────┬────────────────┘              │
+                    ▼                               │
+    ┌────────────────────────────────┐              │
+    │  CLIENT RESULT                 │              │
+    │  Beat target? → Gold earned    │              │
+    │  Failed? → Reputation drops    │              │
+    └───────────────┬────────────────┘              │
+                    ▼                               │
+    Enough cards for another reading? ──Yes──►──────┘
+                    │
+                   No
+                    ▼
+              ☽ NIGHT ENDS ☾
+                    ▼
+    ┌────────────────────────────────┐
+    │  SHOP PHASE                    │
+    │  Buy cards (deck grows)        │
+    │  Buy talismans                 │
+    │  Remove cards (deck tightens)  │
+    └───────────────┬────────────────┘
+                    ▼
+             Next Night...
+        (Harder clients, higher targets)
 ```
+
+### Night Economy
+- **Starting deck:** ~30 cards (22 Major Arcana + 8-10 random Minor Arcana)
+- **Cards per reading:** 9 placed (from hand of 10-12)
+- **Unused hand cards:** Return to deck
+- **Deck growth:** Buy Minor Arcana in shop → more clients per night
+- **Strategic tradeoff:** Big deck = more clients but weaker hands. Small deck = fewer clients but stronger combos.
+
+### Reputation System
+- **Reputation** affects gold earned per successful reading
+- **Dropping reputation:** Rejecting clients, failing readings (not meeting target score)
+- **Low reputation → clients pay less gold** — harder to afford shop upgrades
+- **Design intent:** Prevents players from freely skipping hard clients without consequence
+
+### Session Length
+- Target: 25–45 minutes per run (multiple nights)
+- Each reading: 2–4 minutes
+- Night 1: ~3 clients | Night 3: ~4-5 clients | Late game: 5-6 clients
 
 ### Session Length
 - Target: 25–45 minutes per run
@@ -257,105 +299,73 @@ Every card placement requires an orientation decision. This is the game's signat
 
 ---
 
-## 4. Spread System
+## 4. Spread System — The 3×3 Grid
 
-Spreads are the "board" — the spatial layout where cards are placed. Each spread has unique positions with meanings, affinities, and strategic implications.
+All readings use the same 3×3 spread: **Past, Present, Future** — each with 3 card slots. This creates a consistent, learnable board while offering deep strategic variety through card placement choices.
 
-### 4.1 Spread Types
+### 4.1 The Standard Spread (3×3)
 
-#### Three-Card Spread (Starter)
 ```
-┌──────────┐  ┌──────────┐  ┌──────────┐
-│   PAST   │  │ PRESENT  │  │  FUTURE  │
-│          │  │          │  │          │
-│ Earth+   │  │ Fire+    │  │ Water+   │
-│ High #s  │  │ Mid #s   │  │ Aces     │
-└──────────┘  └──────────┘  └──────────┘
+┌───────────┬───────────┬───────────┐
+│  PAST 1   │  PAST 2   │  PAST 3   │
+│ Pentacles+│ Swords+   │ Major+    │
+│ High #s   │ Mid #s    │ Any       │
+├───────────┼───────────┼───────────┤
+│ PRESENT 1 │ PRESENT 2 │ PRESENT 3 │
+│ Wands+    │ Any       │ Cups+     │
+│ Mid #s    │ Pairs+    │ Mid #s    │
+├───────────┼───────────┼───────────┤
+│ FUTURE 1  │ FUTURE 2  │ FUTURE 3  │
+│ Cups+     │ Major+    │ Wands+    │
+│ Aces-3    │ Any       │ High #s   │
+└───────────┴───────────┴───────────┘
 ```
-- **Positions:** 3
-- **Difficulty:** ★☆☆☆☆
-- **Score Ceiling:** Low-Medium
-- **Best For:** Quick readings, learning, safe plays
-- **Position Affinities:**
-  - Past: Pentacles, 7-10 → history, foundations built
-  - Present: Wands, 4-7 → current action and energy
-  - Future: Cups, Aces-3 → potential, what flows ahead
 
-#### Five-Card Cross (Intermediate)
-```
-              ┌──────────┐
-              │  CROWN   │
-              │ Aspire   │
-              └──────────┘
-┌──────────┐  ┌──────────┐  ┌──────────┐
-│   PAST   │  │ PRESENT  │  │  FUTURE  │
-└──────────┘  └──────────┘  └──────────┘
-              ┌──────────┐
-              │ FOUNDATION│
-              │ Root      │
-              └──────────┘
-```
-- **Positions:** 5
-- **Difficulty:** ★★★☆☆
-- **Score Ceiling:** Medium-High
-- **Spatial Element:** Center card (Present) affects all 4 adjacent cards
-- **Crown:** Major Arcana get ×2 here. Represents highest potential.
-- **Foundation:** Pentacles and 4s get bonus. Represents stability and roots.
+- **Positions:** 9 (3 rows × 3 columns)
+- **Cards per reading:** 9 placed from hand of 10-12
+- **Scoring order:** Left→right, top→bottom (positions 1-9)
 
-#### Celtic Cross (Advanced)
-```
-              ┌──────────┐
-              │  5:CROWN │
-              └──────────┘
-┌──────────┐  ┌──────────┐  ┌──────────┐
-│  4:PAST  │  │1:PRESENT │  │ 6:FUTURE │
-│          │  │ 2:CROSS  │  │          │
-└──────────┘  └──────────┘  └──────────┘
-              ┌──────────┐    ┌──────────┐
-              │3:FOUNDATION│  │10:OUTCOME│
-              └──────────┘    │ 9:HOPES  │
-                              │ 8:ENVIRON│
-                              │ 7:SELF   │
-                              └──────────┘
-```
-- **Positions:** 10
-- **Difficulty:** ★★★★★
-- **Score Ceiling:** Very High
-- **Special:** Position 2 (Cross) sits ON TOP of Position 1 — it modifies/challenges the Present card. Both cards interact.
-- **Staff (positions 7-10):** Vertical column scored as its own mini-chain
-- **Position Details:**
-  1. Present Situation — all suits neutral
-  2. Challenge/Crossing — Swords bonus (conflict)
-  3. Foundation — Pentacles bonus (roots)
-  4. Recent Past — high numbers bonus
-  5. Crown/Best Outcome — Major Arcana bonus
-  6. Near Future — Wands bonus (approaching energy)
-  7. Self — Court cards bonus (identity)
-  8. Environment — all suits contribute (variety bonus)
-  9. Hopes & Fears — reversed cards score double here (duality)
-  10. Outcome — completion cards (10s, The World) bonus
+### 4.2 Row Meanings (Time Axis)
 
-#### Relationship Spread (Specialized)
-```
-┌──────────┐           ┌──────────┐
-│   YOU    │           │ PARTNER  │
-└─────┬────┘           └────┬─────┘
-      └──────┐  ┌──────────┘
-          ┌──┴──┴──┐
-          │CONNECT │
-          └───┬────┘
-          ┌───┴────┐
-          │CHALLENGE│
-          └───┬────┘
-          ┌───┴────┐
-          │ ADVICE │
-          └────────┘
-```
-- **Positions:** 5
-- **Difficulty:** ★★★☆☆
-- **Score Ceiling:** High (with Cups focus)
-- **Special:** Cups cards get ×1.5 Resonance in ALL positions. You + Partner positions mirror each other — matching suits in both = "harmony bonus."
-- **Querent Affinity:** Love/relationship questions unlock this spread
+| Row | Theme | Suit Affinity | Number Affinity | Tarot Connection |
+|-----|-------|---------------|-----------------|------------------|
+| **Past** | What has been | Pentacles (stability, roots) | 7-10 (maturity, completion) | The foundation of the reading |
+| **Present** | What is now | Wands (action, energy) | 4-7 (structure, challenge) | The heart of the reading |
+| **Future** | What will come | Cups (flow, potential) | Aces-3 (beginnings, growth) | The outcome of the reading |
+
+### 4.3 Row Bonuses
+
+When all 3 cards in a row share the row's affinity suit:
+- **Row Chain:** ×1.5 Resonance to all 3 cards in that row
+
+When all 3 cards in a column form a suit chain (same suit top to bottom):
+- **Column Chain:** ×1.5 Resonance to all 3 cards in that column
+
+When both a row chain AND column chain intersect at a card:
+- **Cross Bonus:** That card gets an additional ×2 Resonance
+
+### 4.4 Position-Specific Affinities
+
+Each of the 9 positions has its own affinity that rewards specific cards:
+
+| Position | Name | Suit Affinity | Number Affinity | Special |
+|----------|------|---------------|-----------------|---------|
+| 1 | Past-Root | Pentacles | 7-10 | Foundation cards (4s) get ×1.5 |
+| 2 | Past-Event | Swords | 5-8 | Conflict cards score higher |
+| 3 | Past-Lesson | Major Arcana | Any | Major Arcana get ×1.5 |
+| 4 | Present-Self | Wands | 4-7 | Court cards get bonus |
+| 5 | Present-Center | Any | Pairs | Center of the spread — pairs bonus ×2 |
+| 6 | Present-Other | Cups | 4-7 | Relationship cards |
+| 7 | Future-Hope | Cups | Aces-3 | Aces get ×2 here |
+| 8 | Future-Path | Major Arcana | Any | Major Arcana get ×1.5 |
+| 9 | Future-Destiny | Wands | 8-10 | Chain closers (10s) get ×2 |
+
+### 4.5 Future Spread Variants (Post-Demo)
+
+The 3×3 grid is the core spread for the demo. Future updates may introduce variant spreads that modify position affinities or add special rules, while keeping the 9-card structure:
+- **Relationship Reading:** All Cups positions, harmony bonuses
+- **Career Reading:** All Pentacles/Wands positions, gold bonuses
+- **Shadow Reading:** Veil bonuses, reversed cards score double
 
 #### Horseshoe Spread (Risk/Reward)
 ```

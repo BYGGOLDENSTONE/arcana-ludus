@@ -11,9 +11,9 @@
 - **Repo:** github.com/BYGGOLDENSTONE/arcana-ludus
 
 ## Current Phase
-- **Phase:** Phase 1 (Foundation) complete → Ready for Phase 2 (Core Mechanics)
+- **Phase:** Phase 2 (Core Mechanics) complete → Ready for Phase 3 (Game Loop)
 - **Target:** Playable Steam Demo (Act I, full juice)
-- **Next Step:** Begin Phase 2 — spread system, card placement, match detection, basic scoring engine
+- **Next Step:** Begin Phase 3 — Night system, querent/client flow, deck management, shop
 
 ## Development Rules
 
@@ -110,10 +110,18 @@ res://
 - `assets/data/tarot-images.json` — Card name → image filename mapping
 - `assets/data/tarot.json` — Basic card metadata (name, number, suit)
 
+## Core Loop — Night System
+- **1 Night = 1 Round** — Player serves clients until deck runs out
+- **3×3 Spread** — 9 positions (Past/Present/Future × 3), all readings use this layout
+- **Hand:** Draw 12 cards per client, place 9, unused return to deck
+- **Starting deck:** ~30 cards (22 Major Arcana + 8-10 Minor Arcana)
+- **Reputation:** Rejecting/failing clients lowers reputation → less gold
+- **Escalation:** Later nights have harder clients with higher target scores
+
 ## Demo Scope
 - 62 cards (22 Major Arcana + 40 Minor Arcana Ace-10, no Court cards)
-- 2 spreads (Three-Card, Five-Card Cross)
-- 7 querents (6 normal + 1 boss) — Act I only
+- 1 spread (3×3 Past/Present/Future grid)
+- Multiple clients per night, night ends when deck runs out
 - 17 talismans (10 Common, 5 Uncommon, 2 Rare)
 - Full scoring, chains, combos, Veil, shop, tutorial, Grimoire
 
@@ -127,7 +135,7 @@ res://
 - [x] Card meanings data downloaded
 - [x] Git repo created, initial commit pushed
 - [x] Phase 1: Foundation
-- [ ] Phase 2: Core Mechanics
+- [x] Phase 2: Core Mechanics
 - [ ] Phase 3: Game Loop
 - [ ] Phase 4: Chains & Combos
 - [ ] Phase 5: Veil & Talismans

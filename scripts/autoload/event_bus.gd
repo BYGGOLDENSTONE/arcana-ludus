@@ -18,6 +18,11 @@ signal deck_shuffled()
 signal card_drawn(card_data: Resource)
 signal card_discarded(card_data: Resource)
 
+# -- Spread signals (Phase 2) --
+signal card_placed_on_spread(card: Node, slot: Node)
+signal all_spread_slots_filled()
+signal spread_cleared()
+
 # -- Scoring signals (Phase 2+) --
 signal scoring_started()
 signal card_scored(card: Node, insight: int, resonance: float)

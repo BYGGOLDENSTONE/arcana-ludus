@@ -4,13 +4,13 @@ extends Node2D
 signal card_selected(card: Node2D)
 signal card_deselected(card: Node2D)
 
-## Card is 350px wide. At scale 0.50 → 175px. At scale 0.75 → 262px.
-## Normal spacing: 175 + 20 gap = 195px between centers.
-## Selected card extra: (262 - 175) / 2 = 43px each side.
-const CARD_WIDTH_NORMAL := 175.0  # 350 * 0.50
-const CARD_WIDTH_SELECTED := 262.0  # 350 * 0.75
-const GAP := 20.0
-const CARD_SPACING := 195.0  # CARD_WIDTH_NORMAL + GAP
+## Card is 350px wide. At scale 0.30 → 105px. At scale 0.38 → 133px.
+## Normal spacing: 105 + 12 gap = 117px between centers.
+## Selected card extra: (133 - 105) / 2 = 14px each side.
+const CARD_WIDTH_NORMAL := 105.0  # 350 * 0.30
+const CARD_WIDTH_SELECTED := 133.0  # 350 * 0.38
+const GAP := 12.0
+const CARD_SPACING := 117.0  # CARD_WIDTH_NORMAL + GAP
 const SELECTED_LIFT := 0.0
 const ARRANGE_DURATION := 0.25
 
@@ -37,11 +37,16 @@ func remove_card(card: Node2D) -> void:
 		card.is_in_hand = false
 		if selected_card == card:
 			selected_card = null
-		card.selected.disconnect(_on_card_selected)
-		card.deselected.disconnect(_on_card_deselected)
-		card.drag_started.disconnect(_on_card_drag_started)
-		card.drag_ended.disconnect(_on_card_drag_ended)
-		card_container.remove_child(card)
+		if card.selected.is_connected(_on_card_selected):
+			card.selected.disconnect(_on_card_selected)
+		if card.deselected.is_connected(_on_card_deselected):
+			card.deselected.disconnect(_on_card_deselected)
+		if card.drag_started.is_connected(_on_card_drag_started):
+			card.drag_started.disconnect(_on_card_drag_started)
+		if card.drag_ended.is_connected(_on_card_drag_ended):
+			card.drag_ended.disconnect(_on_card_drag_ended)
+		if card.get_parent() == card_container:
+			card_container.remove_child(card)
 		_arrange_cards()
 
 
