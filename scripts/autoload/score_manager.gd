@@ -1,12 +1,13 @@
 extends Node
-## Scoring engine — Phase 5: supports per-row partial scoring, full resolution,
-## Veil tier bonuses, and querent theme bonuses.
-## Resolution: Base Insight → Position Match → Chains → Cross-Element →
-##             Numerological → Veil Tier → Querent Theme
+## Scoring engine — Phase 5.4: supports per-row partial scoring, full resolution,
+## Major Arcana effects, Veil tier bonuses, and querent theme bonuses.
+## Resolution: Base Insight → Position Match → Arcana Effects → Chains →
+##             Cross-Element → Numerological → Talisman → Veil Tier
 
 const MatchCalc = preload("res://scripts/utils/match_calculator.gd")
 const ChainDetect = preload("res://scripts/utils/chain_detector.gd")
 const ComboDetect = preload("res://scripts/utils/combo_detector.gd")
+const ArcanaFX = preload("res://scripts/utils/arcana_effects.gd")
 
 var current_score: int = 0
 var target_score: int = 0
@@ -14,6 +15,7 @@ var card_scores: Array = []
 var detected_chains: Array = []
 var detected_combos: Array = []
 var meta_effects: Array = []
+var arcana_effects_log: Array = []
 
 
 func reset_score() -> void:
@@ -22,6 +24,7 @@ func reset_score() -> void:
 	detected_chains.clear()
 	detected_combos.clear()
 	meta_effects.clear()
+	arcana_effects_log.clear()
 
 
 func set_target(target: int) -> void:
@@ -104,36 +107,53 @@ func score_reading(placed_cards: Array) -> int:
 			"total": 0,
 		})
 
-	# --- Step 2: Elemental Chain Multipliers ---
-	detected_chains = ChainDetect.detect_chains(placed_cards)
-	for chain in detected_chains:
-		TalismanManager.on_chain(chain)
-		_apply_chain_bonus(chain)
-		EventBus.chain_detected.emit(chain)
+	# --- Step 2: Major Arcana Card-Specific Effects ---
+	var arcana_modifiers: Dictionary = ArcanaFX.get_chain_modifiers(card_scores)
+	arcana_effects_log = ArcanaFX.apply_effects(card_scores)
 
-	# --- Step 3: Cross-Element Combos ---
-	var cross_combos := ComboDetect.detect_cross_element_combos(placed_cards)
+	# Emit arcana effect signals for UI
+	for effect_desc in arcana_effects_log:
+		EventBus.arcana_effect_triggered.emit(effect_desc)
+
+	# --- Step 3: Elemental Chain Multipliers ---
+	if not arcana_modifiers.get("chains_disabled", false):
+		detected_chains = ChainDetect.detect_chains(placed_cards, arcana_modifiers)
+		for chain in detected_chains:
+			TalismanManager.on_chain(chain)
+			_apply_chain_bonus(chain)
+			EventBus.chain_detected.emit(chain)
+
+	# --- Step 4: Cross-Element Combos ---
+	var cross_combos := ComboDetect.detect_cross_element_combos(placed_cards, arcana_modifiers)
 	for combo in cross_combos:
 		_apply_cross_element_combo(combo)
 		detected_combos.append(combo)
 		EventBus.combo_detected.emit(combo)
 
-	# --- Step 4: Numerological Combos ---
+	# --- Step 5: Numerological Combos ---
 	var num_combos := ComboDetect.detect_numerological_combos(placed_cards)
 	for combo in num_combos:
 		_apply_numerological_combo(combo)
 		detected_combos.append(combo)
 		EventBus.combo_detected.emit(combo)
 
-	# --- Step 5: Talisman on_score hooks ---
+	# --- Step 6: Talisman on_score hooks ---
 	for entry in card_scores:
 		TalismanManager.on_score_card(entry)
 
-	# --- Step 6: Veil Tier Bonuses ---
+	# --- Step 7: Veil Tier Bonuses ---
 	_apply_veil_tier_bonuses()
 
-	# --- Step 7: Talisman after_reading hooks ---
+	# --- Step 8: Talisman after_reading hooks ---
 	TalismanManager.on_after_reading(card_scores)
+
+	# --- Step 9: Major Arcana Post-Scoring Effects (extra Veil, healing) ---
+	ArcanaFX.apply_post_effects(card_scores)
+
+	# --- Step 10: Death Reversed multiplier lock (after all bonuses) ---
+	if arcana_modifiers.get("multiplier_lock", false):
+		for entry in card_scores:
+			entry.resonance = 1.0
 
 	# --- Final: Calculate per-card totals and sum ---
 	for entry in card_scores:
@@ -288,3 +308,7 @@ func get_detected_combos() -> Array:
 
 func get_meta_effects() -> Array:
 	return meta_effects
+
+
+func get_arcana_effects() -> Array:
+	return arcana_effects_log

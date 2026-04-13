@@ -2,28 +2,53 @@ class_name ChainDetector
 ## Detects elemental chains (same-suit connected groups) in a spread.
 ## A chain is 2+ cards of the same suit in adjacent (orthogonal) positions.
 ## Phase 4: Chain multipliers, Ace starter bonus, 10 closer bonus, Perfect Chain.
+## Phase 5.4: Supports wild suit cards (Fool), chain length bonus (Hierophant),
+##            excluded indices (Lovers reversed), extra suits (Moon).
 
-static func detect_chains(placed_cards: Array) -> Array:
+static func detect_chains(placed_cards: Array, modifiers: Dictionary = {}) -> Array:
 	## Returns array of chain dictionaries.
-	## Each: { suit, length, card_indices, base_multiplier,
-	##   has_ace, has_ten, ace_bonus_per_card, ten_multiplier,
-	##   perfect_chain, perfect_multiplier }
+	## modifiers: { wild_suit_indices, chain_length_bonus,
+	##              chain_excluded_indices, extra_suit_cards }
 
-	# Build position map: "row,col" → index in placed_cards
+	var wild_indices: Array = modifiers.get("wild_suit_indices", [])
+	var length_bonus: int = modifiers.get("chain_length_bonus", 0)
+	var excluded: Array = modifiers.get("chain_excluded_indices", [])
+	var extra_suits: Dictionary = modifiers.get("extra_suit_cards", {})
+
+	# Build position map: "row,col" -> index in placed_cards
 	var pos_map: Dictionary = {}
 	for i in range(placed_cards.size()):
 		var pd: Resource = placed_cards[i].position_data
 		pos_map["%d,%d" % [pd.row, pd.col]] = i
 
-	# Group indices by suit (skip major arcana — they don't form suit chains)
+	# Group indices by suit (skip excluded cards)
 	var suit_indices: Dictionary = {}
 	for i in range(placed_cards.size()):
-		var suit: String = placed_cards[i].card.card_data.suit
-		if suit == "major":
+		if i in excluded:
 			continue
-		if not suit_indices.has(suit):
-			suit_indices[suit] = []
-		suit_indices[suit].append(i)
+
+		var suit: String = placed_cards[i].card.card_data.suit
+
+		if i in wild_indices:
+			# Wild cards join ALL elemental suit groups
+			for s in ["cups", "wands", "swords", "pentacles"]:
+				if not suit_indices.has(s):
+					suit_indices[s] = []
+				suit_indices[s].append(i)
+		elif suit == "major":
+			continue
+		else:
+			if not suit_indices.has(suit):
+				suit_indices[suit] = []
+			suit_indices[suit].append(i)
+
+		# Extra suit from Moon (add to second suit group)
+		if extra_suits.has(i):
+			var extra: String = extra_suits[i]
+			if not suit_indices.has(extra):
+				suit_indices[extra] = []
+			if i not in suit_indices[extra]:
+				suit_indices[extra].append(i)
 
 	# Find connected components per suit
 	var chains: Array = []
@@ -32,7 +57,7 @@ static func detect_chains(placed_cards: Array) -> Array:
 			suit_indices[suit], placed_cards, pos_map)
 		for component in components:
 			if component.size() >= 2:
-				chains.append(_build_chain_data(component, placed_cards, suit))
+				chains.append(_build_chain_data(component, placed_cards, suit, length_bonus))
 
 	return chains
 
@@ -77,7 +102,8 @@ static func _get_adjacent_indices(
 
 
 static func _build_chain_data(
-		indices: Array, placed_cards: Array, suit: String) -> Dictionary:
+		indices: Array, placed_cards: Array, suit: String,
+		length_bonus: int = 0) -> Dictionary:
 	var length: int = indices.size()
 	var has_ace := false
 	var has_ten := false
@@ -90,12 +116,14 @@ static func _build_chain_data(
 			has_ten = true
 
 	var perfect := has_ace and has_ten
+	# Chain length bonus: treat chain as longer for multiplier tier
+	var effective_length: int = length + length_bonus
 
 	return {
 		"suit": suit,
 		"length": length,
 		"card_indices": indices.duplicate(),
-		"base_multiplier": _get_chain_multiplier(length),
+		"base_multiplier": _get_chain_multiplier(effective_length),
 		"has_ace": has_ace,
 		"has_ten": has_ten,
 		"ace_bonus_per_card": 2.0 if has_ace else 0.0,

@@ -2,6 +2,7 @@ class_name ComboDetector
 ## Detects cross-element combos and numerological combos in a spread.
 ## Phase 4: Steam, Wildfire, Growth, Erosion, Forge, Storm +
 ##          Pairs, Triples, Quads, Number Runs.
+## Phase 5.4: Supports all_element_indices (Magician upright — all 4 suits).
 
 ## Cross-element combo definitions (suits sorted alphabetically for consistency)
 const CROSS_COMBOS := {
@@ -14,9 +15,12 @@ const CROSS_COMBOS := {
 }
 
 
-static func detect_cross_element_combos(placed_cards: Array) -> Array:
+static func detect_cross_element_combos(placed_cards: Array, modifiers: Dictionary = {}) -> Array:
 	## Detect adjacent different-suit pairs that trigger elemental combos.
+	## modifiers: { all_element_indices: Array } — cards that count as all 4 suits.
 	## Returns array of { combo_id, name, description, card_indices }.
+	var all_element_indices: Array = modifiers.get("all_element_indices", [])
+
 	var pos_map: Dictionary = {}
 	for i in range(placed_cards.size()):
 		var pd: Resource = placed_cards[i].position_data
@@ -27,8 +31,14 @@ static func detect_cross_element_combos(placed_cards: Array) -> Array:
 
 	for i in range(placed_cards.size()):
 		var suit_a: String = placed_cards[i].card.card_data.suit
-		if suit_a == "major":
+		var suits_a: Array
+
+		if i in all_element_indices:
+			suits_a = ["cups", "wands", "swords", "pentacles"]
+		elif suit_a == "major":
 			continue
+		else:
+			suits_a = [suit_a]
 
 		var pd: Resource = placed_cards[i].position_data
 		# Only check right and down to avoid duplicate pair detection
@@ -38,24 +48,34 @@ static func detect_cross_element_combos(placed_cards: Array) -> Array:
 				continue
 			var j: int = pos_map[key]
 			var suit_b: String = placed_cards[j].card.card_data.suit
-			if suit_b == "major":
+			var suits_b: Array
+
+			if j in all_element_indices:
+				suits_b = ["cups", "wands", "swords", "pentacles"]
+			elif suit_b == "major":
 				continue
+			else:
+				suits_b = [suit_b]
 
 			var pair_key := "%d-%d" % [mini(i, j), maxi(i, j)]
-			for combo_id in CROSS_COMBOS:
-				var c: Dictionary = CROSS_COMBOS[combo_id]
-				var s: Array = c.suits
-				if (suit_a == s[0] and suit_b == s[1]) or \
-				   (suit_a == s[1] and suit_b == s[0]):
-					var unique_key: String = pair_key + ":" + str(combo_id)
-					if not found.has(unique_key):
-						found[unique_key] = true
-						combos.append({
-							"combo_id": combo_id,
-							"name": c.name,
-							"description": c.desc,
-							"card_indices": [i, j],
-						})
+			for sa in suits_a:
+				for sb in suits_b:
+					if sa == sb:
+						continue
+					for combo_id in CROSS_COMBOS:
+						var c: Dictionary = CROSS_COMBOS[combo_id]
+						var s: Array = c.suits
+						if (sa == s[0] and sb == s[1]) or \
+						   (sa == s[1] and sb == s[0]):
+							var unique_key: String = pair_key + ":" + str(combo_id)
+							if not found.has(unique_key):
+								found[unique_key] = true
+								combos.append({
+									"combo_id": combo_id,
+									"name": c.name,
+									"description": c.desc,
+									"card_indices": [i, j],
+								})
 
 	return combos
 

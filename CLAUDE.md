@@ -13,9 +13,9 @@
 ## Current Phase
 - **Phase:** Phase 5 (Veil & Talismans) — IN PROGRESS
 - **Target:** Playable Steam Demo (Act I, full juice)
-- **Completed:** 5.1 Veil System, 5.2 Talisman Framework, 5.3 Demo Talismans (17)
-- **Next Step:** 5.4 Major Arcana Effects
-- **Upcoming:** Phase 6 — Juice & Polish
+- **Completed:** 5.1 Veil System, 5.2 Talisman Framework, 5.3 Demo Talismans (17), 5.4 Major Arcana Effects (22 cards)
+- **Next Step:** Phase 6 — Juice & Polish
+- **Upcoming:** Phase 7 — Content & Balance
 
 ## Development Rules
 
@@ -62,7 +62,7 @@
 ### Autoload Singletons (9)
 - `GameManager` — run state, current act/querent, lives, gold, reputation, night tracking
 - `DeckManager` — player deck, draw pile, discard, hand, sideboard (removed cards still owned)
-- `ScoreManager` — scoring engine with per-row partial scoring + full resolution (chains, combos, Veil tier bonuses, talisman hooks)
+- `ScoreManager` — scoring engine with per-row partial scoring + full resolution (arcana effects, chains, combos, Veil tier bonuses, talisman hooks)
 - `VeilManager` — Veil value 0-11, tier tracking (Clear/Glimpse/Gaze/Abyss/Void), card-based accumulation/reduction, target score adjustment, The Void death
 - `TalismanEffects` — defines all talisman effect hook callables (17 talismans implemented)
 - `TalismanManager` — active talismans (max 5), hook system (before_reading, on_card_place, on_score, on_chain, after_reading)
@@ -80,6 +80,7 @@
 - `QuerentGenerator` (scripts/utils/) — procedural querent generation with night-scaled difficulty
 - `ChainDetector` (scripts/utils/) — elemental chain detection (same-suit adjacency groups)
 - `ComboDetector` (scripts/utils/) — cross-element combos and numerological combos
+- `ArcanaEffects` (scripts/utils/) — all 22 Major Arcana upright/reversed scoring effects
 
 ### Project Structure
 ```
@@ -163,7 +164,7 @@ res://
 - [x] Phase 3: Game Loop
 - [x] Phase 4: Chains & Combos
 - [x] Phase 4.5: Placement Refactor (row-by-row click-select, row reveal + 3-card batch placement)
-- [~] Phase 5: Veil & Talismans (5.1 Veil, 5.2 Framework, 5.3 Talismans DONE — 5.4 Major Arcana Effects TODO)
+- [x] Phase 5: Veil & Talismans (5.1 Veil, 5.2 Framework, 5.3 Talismans, 5.4 Major Arcana Effects)
 - [ ] Phase 6: Juice & Polish
 - [ ] Phase 7: Content & Balance
 - [ ] Phase 8: Demo Release Prep

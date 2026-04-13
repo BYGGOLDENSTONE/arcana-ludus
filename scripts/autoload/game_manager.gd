@@ -37,6 +37,10 @@ func lose_life() -> void:
 		end_run(false)
 
 
+func heal_life(amount: int = 1) -> void:
+	lives = mini(lives + amount, max_lives)
+
+
 func advance_night() -> void:
 	current_night += 1
 	current_querent_index = 0

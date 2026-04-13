@@ -43,6 +43,9 @@ signal veil_void_triggered()
 signal veil_card_processed(card_name: String, veil_amount: int)
 signal cleanse_ritual_performed()
 
+# -- Major Arcana effect signals (Phase 5.4) --
+signal arcana_effect_triggered(effect_description: String)
+
 # -- Talisman signals (Phase 5) --
 signal talisman_added(talisman_data: Resource)
 signal talisman_removed(talisman_data: Resource)

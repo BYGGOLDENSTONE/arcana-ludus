@@ -256,6 +256,15 @@ func _do_full_scoring() -> void:
 			combo_names.append(combo.name)
 		result_parts.append("Combos: %s" % ", ".join(combo_names))
 
+	# Show Major Arcana effects
+	var arcana: Array = ScoreManager.get_arcana_effects()
+	if not arcana.is_empty():
+		# Show first 3 effects to keep UI readable
+		var shown: Array = arcana.slice(0, mini(arcana.size(), 3))
+		if arcana.size() > 3:
+			shown.append("+%d more" % (arcana.size() - 3))
+		result_parts.append("Arcana: %s" % ", ".join(shown))
+
 	# Show Veil tier info if active
 	var tier: int = VeilManager.get_tier()
 	if tier != VeilManager.VeilTier.CLEAR:
