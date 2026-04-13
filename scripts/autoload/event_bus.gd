@@ -28,6 +28,10 @@ signal scoring_started()
 signal card_scored(card: Node, insight: int, resonance: float)
 signal scoring_completed(total_score: int)
 
+# -- Chain & Combo signals (Phase 4) --
+signal chain_detected(chain_data: Dictionary)
+signal combo_detected(combo_data: Dictionary)
+
 # -- Veil signals (Phase 5+) --
 signal veil_changed(old_value: int, new_value: int)
 signal veil_tier_changed(new_tier: int)

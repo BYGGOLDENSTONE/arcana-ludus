@@ -11,10 +11,10 @@
 - **Repo:** github.com/BYGGOLDENSTONE/arcana-ludus
 
 ## Current Phase
-- **Phase:** Phase 3 (Game Loop) complete → Ready for Phase 4 (Chains & Combos)
+- **Phase:** Phase 4 (Chains & Combos) complete → Ready for Phase 4.5 (Placement Refactor)
 - **Target:** Playable Steam Demo (Act I, full juice)
-- **Next Step:** Begin Phase 4 — Elemental chains, cross-element combos, numerological combos, scoring resolution order
-- **Upcoming:** Phase 4.5 — Placement Refactor (drag-drop → poker-style row-by-row click-select)
+- **Next Step:** Begin Phase 4.5 — Placement Refactor (drag-drop → poker-style row-by-row click-select)
+- **Upcoming:** Phase 5 — Veil & Talismans
 
 ## Development Rules
 
@@ -61,7 +61,7 @@
 ### Autoload Singletons (7)
 - `GameManager` — run state, current act/querent, lives, gold, reputation, night tracking
 - `DeckManager` — player deck, draw pile, discard, hand, sideboard (removed cards still owned)
-- `ScoreManager` — scoring engine, combo detection
+- `ScoreManager` — scoring engine with Phase 4 resolution order (chains, combos)
 - `VeilManager` — Veil counter, tier tracking
 - `DataLoader` — loads card/spread/talisman/querent definitions
 - `AudioManager` — SFX and music bus management
@@ -75,6 +75,8 @@
 - `SpreadData` / `SpreadPositionData` — spread layout definitions
 - `QuerentData` (scripts/resources/) — client properties, from_dict()
 - `QuerentGenerator` (scripts/utils/) — procedural querent generation with night-scaled difficulty
+- `ChainDetector` (scripts/utils/) — elemental chain detection (same-suit adjacency groups)
+- `ComboDetector` (scripts/utils/) — cross-element combos and numerological combos
 
 ### Project Structure
 ```
@@ -151,7 +153,7 @@ res://
 - [x] Phase 1: Foundation
 - [x] Phase 2: Core Mechanics
 - [x] Phase 3: Game Loop
-- [ ] Phase 4: Chains & Combos
+- [x] Phase 4: Chains & Combos
 - [ ] Phase 5: Veil & Talismans
 - [ ] Phase 6: Juice & Polish
 - [ ] Phase 7: Content & Balance

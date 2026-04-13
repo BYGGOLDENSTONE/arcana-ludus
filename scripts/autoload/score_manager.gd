@@ -1,17 +1,26 @@
 extends Node
-## Scoring engine — calculates Insight and Resonance for card placements.
-## Phase 2: per-card scoring with position match bonuses.
+## Scoring engine — Phase 4: chains, combos, and strict resolution order.
+## Resolution: Base Insight → Position Match → Chains → Cross-Element → Numerological
+## Talisman/Veil/Querent bonuses added in later phases.
 
 const MatchCalc = preload("res://scripts/utils/match_calculator.gd")
+const ChainDetect = preload("res://scripts/utils/chain_detector.gd")
+const ComboDetect = preload("res://scripts/utils/combo_detector.gd")
 
 var current_score: int = 0
 var target_score: int = 0
-var card_scores: Array = []  # Array of { card, insight, resonance, total, match_level }
+var card_scores: Array = []
+var detected_chains: Array = []
+var detected_combos: Array = []
+var meta_effects: Array = []
 
 
 func reset_score() -> void:
 	current_score = 0
 	card_scores.clear()
+	detected_chains.clear()
+	detected_combos.clear()
+	meta_effects.clear()
 
 
 func set_target(target: int) -> void:
@@ -19,46 +28,171 @@ func set_target(target: int) -> void:
 
 
 func score_reading(placed_cards: Array) -> int:
-	## Score all placed cards in the spread.
+	## Score all placed cards with full Phase 4 resolution order.
 	## placed_cards: Array of { slot, card, position_data }
 	## Returns total score.
 	reset_score()
 	EventBus.scoring_started.emit()
 
-	for placement in placed_cards:
-		var card: Node = placement.card
-		var pos_data: Resource = placement.position_data
+	# --- Step 1: Base Insight + Position Match Resonance ---
+	for i in range(placed_cards.size()):
+		var card: Node = placed_cards[i].card
+		var pos_data: Resource = placed_cards[i].position_data
 		var card_data: Resource = card.card_data
-		var is_reversed: bool = card.is_reversed
 
-		var result := _score_card(card_data, pos_data, is_reversed)
-		result.card = card
-		card_scores.append(result)
-		current_score += result.total
-		EventBus.card_scored.emit(card, result.insight, result.resonance)
+		var match_result := MatchCalc.calculate_match(card_data, pos_data)
+
+		card_scores.append({
+			"card": card,
+			"card_data": card_data,
+			"position_data": pos_data,
+			"is_reversed": card.is_reversed,
+			"base_insight": card_data.base_insight,
+			"insight": card_data.base_insight,
+			"base_resonance": match_result.multiplier,
+			"resonance": match_result.multiplier,
+			"match_level": match_result.level,
+			"match_reasons": match_result.reasons,
+			"chain_bonuses": [] as Array[String],
+			"combo_bonuses": [] as Array[String],
+			"total": 0,
+		})
+
+	# --- Step 2: Elemental Chain Multipliers ---
+	detected_chains = ChainDetect.detect_chains(placed_cards)
+	for chain in detected_chains:
+		_apply_chain_bonus(chain)
+		EventBus.chain_detected.emit(chain)
+
+	# --- Step 3: Cross-Element Combos ---
+	var cross_combos := ComboDetect.detect_cross_element_combos(placed_cards)
+	for combo in cross_combos:
+		_apply_cross_element_combo(combo)
+		detected_combos.append(combo)
+		EventBus.combo_detected.emit(combo)
+
+	# --- Step 4: Numerological Combos ---
+	var num_combos := ComboDetect.detect_numerological_combos(placed_cards)
+	for combo in num_combos:
+		_apply_numerological_combo(combo)
+		detected_combos.append(combo)
+		EventBus.combo_detected.emit(combo)
+
+	# --- Final: Calculate per-card totals and sum ---
+	for entry in card_scores:
+		entry.total = int(entry.insight * entry.resonance)
+		current_score += entry.total
+		EventBus.card_scored.emit(entry.card, entry.insight, entry.resonance)
 
 	EventBus.scoring_completed.emit(current_score)
 	return current_score
 
 
-func _score_card(card_data: Resource, pos_data: Resource, _is_reversed: bool) -> Dictionary:
-	## Calculate score for a single card in a position.
-	## Phase 2: Base Insight + position match Resonance multiplier.
-	var insight: int = card_data.base_insight
-	var match_result := MatchCalc.calculate_match(card_data, pos_data)
-	var resonance: float = match_result.multiplier
-	var total := int(insight * resonance)
+func _apply_chain_bonus(chain: Dictionary) -> void:
+	var multiplier: float = chain.base_multiplier
+	var suit_name: String = chain.suit.capitalize()
 
-	return {
-		"insight": insight,
-		"resonance": resonance,
-		"total": total,
-		"match_level": match_result.level,
-		"match_reasons": match_result.reasons,
-	}
+	# Base chain multiplier
+	for idx in chain.card_indices:
+		card_scores[idx].resonance *= multiplier
+		card_scores[idx].chain_bonuses.append("%s Chain x%.1f" % [suit_name, multiplier])
+
+	# Ace starter: +2 Resonance per card in chain
+	if chain.has_ace:
+		for idx in chain.card_indices:
+			card_scores[idx].resonance += chain.ace_bonus_per_card
+			card_scores[idx].chain_bonuses.append("Ace starter +2")
+
+	# 10 closer: chain Resonance x1.5
+	if chain.has_ten:
+		for idx in chain.card_indices:
+			card_scores[idx].resonance *= chain.ten_multiplier
+			card_scores[idx].chain_bonuses.append("10 closer x1.5")
+
+	# Perfect Chain (Ace + 10 same suit): x2
+	if chain.perfect_chain:
+		for idx in chain.card_indices:
+			card_scores[idx].resonance *= chain.perfect_multiplier
+			card_scores[idx].chain_bonuses.append("Perfect Chain x2")
 
 
-func calculate_card_score(card_data: Resource, position_name: String, is_reversed: bool) -> Dictionary:
+func _apply_cross_element_combo(combo: Dictionary) -> void:
+	match combo.combo_id:
+		"steam":
+			# Both combo cards get x2 Insight
+			for idx in combo.card_indices:
+				card_scores[idx].insight *= 2
+				card_scores[idx].combo_bonuses.append("Steam: Insight x2")
+		"wildfire":
+			# All cards gain +3 Insight
+			for i in range(card_scores.size()):
+				card_scores[i].insight += 3
+				card_scores[i].combo_bonuses.append("Wildfire: +3 Insight")
+		"growth":
+			# Gold x2 — meta effect, no direct scoring change
+			meta_effects.append({
+				"type": "gold_multiplier", "value": 2, "source": "Growth"
+			})
+			for idx in combo.card_indices:
+				card_scores[idx].combo_bonuses.append("Growth: Gold x2")
+		"erosion":
+			# Lower-insight card contributes its base insight as Resonance to partner
+			var idx_a: int = combo.card_indices[0]
+			var idx_b: int = combo.card_indices[1]
+			var ins_a: int = card_scores[idx_a].base_insight
+			var ins_b: int = card_scores[idx_b].base_insight
+			if ins_a <= ins_b:
+				card_scores[idx_b].resonance += float(ins_a) * 0.5
+				card_scores[idx_a].combo_bonuses.append("Erosion: gave +%d Res" % int(ins_a * 0.5))
+				card_scores[idx_b].combo_bonuses.append("Erosion: +%d Resonance" % int(ins_a * 0.5))
+			else:
+				card_scores[idx_a].resonance += float(ins_b) * 0.5
+				card_scores[idx_b].combo_bonuses.append("Erosion: gave +%d Res" % int(ins_b * 0.5))
+				card_scores[idx_a].combo_bonuses.append("Erosion: +%d Resonance" % int(ins_b * 0.5))
+		"forge":
+			# +2 Insight to both cards + permanent upgrade meta effect
+			for idx in combo.card_indices:
+				card_scores[idx].insight += 2
+				card_scores[idx].combo_bonuses.append("Forge: +2 Insight")
+			meta_effects.append({
+				"type": "permanent_upgrade", "value": 2, "source": "Forge",
+				"card_indices": combo.card_indices.duplicate(),
+			})
+		"storm":
+			# x2 Resonance to both cards + Veil +2 meta effect
+			for idx in combo.card_indices:
+				card_scores[idx].resonance *= 2.0
+				card_scores[idx].combo_bonuses.append("Storm: Resonance x2")
+			meta_effects.append({
+				"type": "veil_change", "value": 2, "source": "Storm"
+			})
+
+
+func _apply_numerological_combo(combo: Dictionary) -> void:
+	match combo.type:
+		"pair":
+			# +5 Insight each
+			for idx in combo.card_indices:
+				card_scores[idx].insight += 5
+				card_scores[idx].combo_bonuses.append("Pair: +5 Insight")
+		"triple":
+			# x2 Resonance to all three
+			for idx in combo.card_indices:
+				card_scores[idx].resonance *= 2.0
+				card_scores[idx].combo_bonuses.append("Triple: Resonance x2")
+		"quad":
+			# x5 Resonance to all four
+			for idx in combo.card_indices:
+				card_scores[idx].resonance *= 5.0
+				card_scores[idx].combo_bonuses.append("Perfect Harmony: Resonance x5")
+		"run":
+			# +5 Insight per card in run
+			for idx in combo.card_indices:
+				card_scores[idx].insight += 5
+				card_scores[idx].combo_bonuses.append("Run: +5 Insight")
+
+
+func calculate_card_score(card_data: Resource, _position_name: String, _is_reversed: bool) -> Dictionary:
 	## Legacy API — returns { insight, resonance, total }
 	var insight: int = card_data.base_insight
 	var resonance := 1.0
@@ -76,3 +210,15 @@ func is_target_met() -> bool:
 
 func get_score_breakdown() -> Array:
 	return card_scores
+
+
+func get_detected_chains() -> Array:
+	return detected_chains
+
+
+func get_detected_combos() -> Array:
+	return detected_combos
+
+
+func get_meta_effects() -> Array:
+	return meta_effects

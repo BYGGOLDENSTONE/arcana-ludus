@@ -127,10 +127,31 @@ func _on_read_pressed() -> void:
 	var target := ScoreManager.target_score
 	var met := ScoreManager.is_target_met()
 
+	# Build result text with chain/combo summary
+	var result_parts: Array = []
 	if met:
-		info_label.text = "Reading complete! Score %d / %d -- SUCCESS!" % [total, target]
+		result_parts.append("Score %d / %d -- SUCCESS!" % [total, target])
 	else:
-		info_label.text = "Reading complete! Score %d / %d -- Not enough..." % [total, target]
+		result_parts.append("Score %d / %d -- Not enough..." % [total, target])
+
+	var chains := ScoreManager.get_detected_chains()
+	if not chains.is_empty():
+		var chain_names: Array = []
+		for chain in chains:
+			chain_names.append("%s(%d) x%.1f" % [
+				chain.suit.capitalize(), chain.length, chain.base_multiplier])
+			if chain.perfect_chain:
+				chain_names[-1] += " PERFECT!"
+		result_parts.append("Chains: %s" % ", ".join(chain_names))
+
+	var combos := ScoreManager.get_detected_combos()
+	if not combos.is_empty():
+		var combo_names: Array = []
+		for combo in combos:
+			combo_names.append(combo.name)
+		result_parts.append("Combos: %s" % ", ".join(combo_names))
+
+	info_label.text = " | ".join(result_parts)
 
 	_show_score_breakdown()
 	_scoring_done = true
