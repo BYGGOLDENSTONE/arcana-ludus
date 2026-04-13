@@ -1,6 +1,6 @@
 extends Node2D
-## Gameplay scene: draw hand from DeckManager, place cards in 3x3 spread, score.
-## Implements Phase 3 — refactored to work within the Night/Run flow.
+## Gameplay scene: draw hand, place cards row-by-row, score progressively.
+## Phase 4.5 — Row-by-row click-select placement (Past → Present → Future).
 ## Called by GameScene; does NOT create its own deck.
 
 signal reading_finished(score: int, target: int)
@@ -8,10 +8,14 @@ signal reading_finished(score: int, target: int)
 const CARD_SCENE := preload("res://components/card/card.tscn")
 const SpreadDataScript = preload("res://scripts/resources/spread_data.gd")
 const HAND_SIZE := 12
+const CARDS_PER_ROW := 3
+const ROW_NAMES := ["Past", "Present", "Future"]
+
+enum RowPhase { PAST = 0, PRESENT = 1, FUTURE = 2, DONE = 3 }
 
 @onready var hand: Node2D = $Hand
 @onready var spread: Node2D = $SpreadRenderer
-@onready var read_button: Button = $UI/ReadButton
+@onready var phase_button: Button = $UI/ReadButton
 @onready var score_label: Label = $UI/ScoreLabel
 @onready var target_label: Label = $UI/TargetLabel
 @onready var info_label: Label = $UI/InfoLabel
@@ -19,31 +23,41 @@ const HAND_SIZE := 12
 @onready var querent_info_label: Label = $UI/QuerentInfoLabel
 
 var _reading_active: bool = false
-var _scoring_done: bool = false
+var _current_phase: RowPhase = RowPhase.PAST
 var _current_querent: Resource = null
-var _hand_card_data: Array = []  # CardData resources drawn from DeckManager
+var _hand_card_data: Array = []
+var _row_scores: Array[int] = [0, 0, 0]
 
 
 func _ready() -> void:
-	read_button.pressed.connect(_on_read_pressed)
-	read_button.disabled = true
+	phase_button.pressed.connect(_on_confirm_pressed)
+	phase_button.disabled = true
 
-	EventBus.card_placed_on_spread.connect(_on_card_placed_on_spread)
-	EventBus.all_spread_slots_filled.connect(_on_all_slots_filled)
 	EventBus.card_hovered.connect(_on_card_hovered)
 	EventBus.card_unhovered.connect(_on_card_unhovered)
 	EventBus.card_flipped.connect(_on_card_flipped)
 
-	spread.card_placed.connect(_on_spread_card_placed)
+	hand.selection_changed.connect(_on_selection_changed)
 
-	# Hide until start_reading is called
 	visible = false
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not _reading_active or _current_phase == RowPhase.DONE:
+		return
+
+	if event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_SPACE:
+			if hand.get_selected_count() == CARDS_PER_ROW:
+				_confirm_placement()
+				get_viewport().set_input_as_handled()
 
 
 func start_reading(querent: Resource) -> void:
 	_current_querent = querent
 	_reading_active = true
-	_scoring_done = false
+	_current_phase = RowPhase.PAST
+	_row_scores = [0, 0, 0]
 	visible = true
 
 	# Clear previous reading
@@ -55,6 +69,7 @@ func start_reading(querent: Resource) -> void:
 
 	# Set target from querent
 	ScoreManager.set_target(querent.target_score)
+	ScoreManager.reset_score()
 	_update_target_display()
 
 	# Display querent info
@@ -63,11 +78,12 @@ func start_reading(querent: Resource) -> void:
 	# Draw hand from DeckManager
 	_draw_hand()
 
+	# Activate first row
+	spread.set_active_row(0)
+
 	score_label.text = "Score: 0"
-	info_label.text = "Drag cards onto the spread. Right-click to flip upright/reversed."
-	read_button.text = "Read"
-	read_button.disabled = true
-	_update_placed_count()
+	_update_phase_display()
+	phase_button.disabled = true
 
 
 func _draw_hand() -> void:
@@ -97,37 +113,93 @@ func _update_querent_display() -> void:
 	]
 
 
-func _on_card_placed_on_spread(card: Node, _slot: Node) -> void:
-	hand.remove_card(card)
-	_update_placed_count()
-
-
-func _on_spread_card_placed(_slot: Node2D, _card: Node2D) -> void:
-	pass
-
-
-func _on_all_slots_filled() -> void:
-	read_button.disabled = false
-	info_label.text = "All positions filled! Press 'Read' to score the reading."
-
-
-func _on_read_pressed() -> void:
-	if _scoring_done:
-		# Scoring already shown; this press is handled by GameScene via signal
+func _on_selection_changed(count: int) -> void:
+	if _current_phase == RowPhase.DONE:
 		return
 
-	read_button.disabled = true
-	_reading_active = false
+	phase_button.disabled = count != CARDS_PER_ROW
 
-	var placed_cards: Array = spread.get_placed_cards()
-	var total := ScoreManager.score_reading(placed_cards)
+	if count == CARDS_PER_ROW:
+		phase_button.text = "Space: Place %s" % ROW_NAMES[_current_phase]
+		info_label.text = "3 cards selected. Press Space or click the button to place them."
+	elif count > 0:
+		info_label.text = "Select %d more card%s for %s row." % [
+			CARDS_PER_ROW - count,
+			"s" if (CARDS_PER_ROW - count) > 1 else "",
+			ROW_NAMES[_current_phase],
+		]
+		phase_button.text = "%d / %d selected" % [count, CARDS_PER_ROW]
+	else:
+		_update_phase_display()
 
-	# Display results
+
+func _on_confirm_pressed() -> void:
+	if hand.get_selected_count() == CARDS_PER_ROW:
+		_confirm_placement()
+
+
+func _confirm_placement() -> void:
+	if _current_phase == RowPhase.DONE:
+		return
+
+	var selected := hand.get_selected_cards()
+	if selected.size() != CARDS_PER_ROW:
+		return
+
+	var row := int(_current_phase)
+
+	# Remove selected cards from hand (don't free them — spread takes ownership)
+	hand.remove_cards(selected)
+
+	# Place cards into the current row
+	spread.place_cards_in_row(row, selected)
+
+	# Lock the row
+	spread.lock_row(row)
+
+	# Emit row placed signal
+	EventBus.row_placed.emit(row, selected)
+
+	# Score this row
+	if _current_phase == RowPhase.FUTURE:
+		# Final row: full scoring with chains and combos across all 9 cards
+		_do_full_scoring()
+	else:
+		# Partial scoring for this row
+		_do_row_scoring(row)
+
+	# Advance phase
+	_advance_phase()
+
+
+func _do_row_scoring(row: int) -> void:
+	var row_cards := spread.get_row_placed_cards(row)
+	var all_cards := spread.get_placed_cards()
+	var row_score := ScoreManager.score_row(row_cards, all_cards)
+	_row_scores[row] = row_score
+
+	EventBus.row_scored.emit(row, row_score, ScoreManager.current_score)
+
+	# Update score display
+	score_label.text = "Score: %d" % ScoreManager.current_score
+
+	# Show row score breakdown on cards
+	_show_row_breakdown(row)
+
+
+func _do_full_scoring() -> void:
+	var all_cards := spread.get_placed_cards()
+	var total := ScoreManager.score_reading(all_cards)
+
 	score_label.text = "Score: %d" % total
+
+	# Show full breakdown
+	_show_full_breakdown()
+
+	# Build result text
 	var target := ScoreManager.target_score
 	var met := ScoreManager.is_target_met()
 
-	# Build result text with chain/combo summary
 	var result_parts: Array = []
 	if met:
 		result_parts.append("Score %d / %d -- SUCCESS!" % [total, target])
@@ -153,14 +225,36 @@ func _on_read_pressed() -> void:
 
 	info_label.text = " | ".join(result_parts)
 
-	_show_score_breakdown()
-	_scoring_done = true
+
+func _advance_phase() -> void:
+	match _current_phase:
+		RowPhase.PAST:
+			_current_phase = RowPhase.PRESENT
+			spread.set_active_row(1)
+			_update_phase_display()
+		RowPhase.PRESENT:
+			_current_phase = RowPhase.FUTURE
+			spread.set_active_row(2)
+			_update_phase_display()
+		RowPhase.FUTURE:
+			_current_phase = RowPhase.DONE
+			_reading_active = false
+			_finish_reading()
+
+	EventBus.row_phase_changed.emit(int(_current_phase),
+		ROW_NAMES[_current_phase] if _current_phase != RowPhase.DONE else "Done")
+
+
+func _finish_reading() -> void:
+	phase_button.text = "Reading Complete"
+	phase_button.disabled = true
+	placed_count_label.text = "9 / 9 placed"
 
 	# Return unused hand cards to draw pile, discard placed cards
 	_return_cards_to_deck()
 
 	# Notify parent that reading is done
-	reading_finished.emit(total, target)
+	reading_finished.emit(ScoreManager.current_score, ScoreManager.target_score)
 
 
 func _return_cards_to_deck() -> void:
@@ -182,15 +276,44 @@ func _return_cards_to_deck() -> void:
 
 
 func cleanup() -> void:
-	## Clean up the reading scene so it can be reused or freed.
 	spread.clear_all_cards()
 	hand.clear_hand()
 	_hand_card_data.clear()
 	_current_querent = null
+	_current_phase = RowPhase.PAST
+	_reading_active = false
 	visible = false
 
 
-func _show_score_breakdown() -> void:
+func _update_phase_display() -> void:
+	if _current_phase == RowPhase.DONE:
+		placed_count_label.text = "9 / 9 placed"
+		phase_button.text = "Reading Complete"
+		phase_button.disabled = true
+		return
+
+	var row_name := ROW_NAMES[_current_phase]
+	var cards_remaining := hand.cards.size()
+	placed_count_label.text = "%s Row | %d cards in hand" % [row_name, cards_remaining]
+	info_label.text = "Select 3 cards for the %s row. Right-click to reverse." % row_name
+	phase_button.text = "Select 3 cards"
+	phase_button.disabled = true
+
+
+func _show_row_breakdown(row: int) -> void:
+	var row_cards := spread.get_row_placed_cards(row)
+	for entry_data in row_cards:
+		var card: Node = entry_data.card
+		# Find this card's score entry
+		for score_entry in ScoreManager.card_scores:
+			if score_entry.card == card:
+				var value_lbl: Label = card.get_node_or_null("CardVisual/CardFront/ValueLabel")
+				if value_lbl:
+					value_lbl.text = "%d" % score_entry.total
+				break
+
+
+func _show_full_breakdown() -> void:
 	var breakdown: Array = ScoreManager.get_score_breakdown()
 	for entry in breakdown:
 		var card: Node = entry.card
@@ -199,38 +322,28 @@ func _show_score_breakdown() -> void:
 			value_lbl.text = "%d" % entry.total
 
 
-func _update_placed_count() -> void:
-	var filled: int = spread.get_filled_count()
-	placed_count_label.text = "%d / 9 placed" % filled
-	if filled > 0 and filled < 9:
-		read_button.disabled = true
-		read_button.text = "Read"
-
-
 func _update_target_display() -> void:
 	target_label.text = "Target: %d" % ScoreManager.target_score
 
 
 func _on_card_hovered(card: Node) -> void:
-	if not card.card_data or _scoring_done:
+	if not card.card_data or _current_phase == RowPhase.DONE:
 		return
-	var orientation := "Reversed" if card.is_reversed else "Upright"
-	info_label.text = "%s | %s | Insight: %d | %s" % [
+	var orientation := "REVERSED" if card.is_reversed else "Upright"
+	var selected_text := " [SELECTED]" if card.is_selected else ""
+	info_label.text = "%s | %s | Insight: %d | %s%s" % [
 		card.card_data.card_name,
 		card.card_data.suit.capitalize(),
 		card.card_data.base_insight,
-		orientation
+		orientation,
+		selected_text,
 	]
 
 
 func _on_card_unhovered(_card: Node) -> void:
-	if _scoring_done:
+	if _current_phase == RowPhase.DONE:
 		return
-	var filled: int = spread.get_filled_count()
-	if filled >= 9:
-		info_label.text = "All positions filled! Press 'Read' to score the reading."
-	else:
-		info_label.text = "Drag cards onto the spread. Right-click to flip upright/reversed."
+	_update_phase_display()
 
 
 func _on_card_flipped(card: Node, is_reversed: bool) -> void:

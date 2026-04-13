@@ -1,18 +1,16 @@
 extends Node2D
 ## A single slot in the spread grid where a card can be placed.
+## Phase 4.5: cards placed programmatically (no drag-drop).
 
-signal card_dropped(slot: Node2D, card: Node2D)
 signal slot_hovered(slot: Node2D)
 signal slot_unhovered(slot: Node2D)
 
 const SLOT_SIZE := Vector2(120, 195)
-const GLOW_DURATION := 0.2
 
 var position_data: Resource  # SpreadPositionData
 var is_occupied: bool = false
 var placed_card: Node2D = null
-var match_color: Color = Color.TRANSPARENT
-var is_hover_active: bool = false
+var is_active: bool = true
 
 @onready var background: Panel = $Background
 @onready var glow_panel: Panel = $GlowPanel
@@ -44,7 +42,6 @@ func setup(data: Resource) -> void:
 
 
 func show_match_preview(color: Color) -> void:
-	match_color = color
 	if glow_panel:
 		glow_panel.visible = color.a > 0.05
 		var style := glow_panel.get_theme_stylebox("panel") as StyleBoxFlat
@@ -56,7 +53,6 @@ func show_match_preview(color: Color) -> void:
 
 
 func clear_match_preview() -> void:
-	match_color = Color.TRANSPARENT
 	if glow_panel:
 		glow_panel.visible = false
 
@@ -79,25 +75,35 @@ func remove_placed_card() -> Node2D:
 	return card
 
 
+func set_active(active: bool) -> void:
+	is_active = active
+	if background:
+		modulate.a = 1.0 if active else 0.4
+
+
+func set_locked() -> void:
+	is_active = false
+	if background:
+		modulate.a = 0.8
+
+
 func get_snap_position() -> Vector2:
 	return global_position
 
 
 func _on_mouse_entered() -> void:
-	is_hover_active = true
 	slot_hovered.emit(self)
 
 
 func _on_mouse_exited() -> void:
-	is_hover_active = false
 	slot_unhovered.emit(self)
 
 
 func _suit_icon(suit: String) -> String:
 	match suit:
-		"wands": return "🔥"
-		"cups": return "💧"
-		"swords": return "💨"
-		"pentacles": return "🌍"
-		"major": return "★"
+		"wands": return "W"
+		"cups": return "C"
+		"swords": return "S"
+		"pentacles": return "P"
+		"major": return "*"
 		_: return suit

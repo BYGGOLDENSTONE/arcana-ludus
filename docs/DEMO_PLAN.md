@@ -225,7 +225,7 @@ Replace drag-and-drop placement with a poker-style row-by-row click-select syste
    │  Player clicks cards to select     │
    │  (selected cards scale up/glow)    │
    │  Right-click to toggle reversed    │
-   │  "Place" button confirms           │
+   │  Space key confirms placement       │
    │  → Cards auto-place into Past row  │
    │  → Row scores + bonuses shown      │
    │  (9 cards remain in hand)          │
@@ -251,10 +251,12 @@ Replace drag-and-drop placement with a poker-style row-by-row click-select syste
 ```
 
 **Key Design Rules:**
-- **No slot ordering** — selected cards auto-assign to slots (best match or left-to-right). No dragging, no slot picking. Keeps tempo fast like Balatro
-- **Click to select, click again to deselect** — up to 3 cards highlighted at a time per row
+- **No slot ordering** — selected cards auto-assign to slots left-to-right. No dragging, no slot picking. Card position within a row doesn't matter strategically. Keeps tempo fast like Balatro
+- **Left-click to select, click again to deselect** — up to 3 cards highlighted at a time per row
 - **Right-click to reverse** — before confirming, right-click toggles a selected card's orientation. Reversed state must be clearly shown (card tint, icon, label)
+- **Space key to confirm** — when exactly 3 cards selected, Space places them into the current row. Faster than clicking a button. No "Place" button needed
 - **Progressive reveal** — each row's scoring shows immediately after placement, building anticipation for Future
+- **Progressive combos** — Present row combos with Past. Future row combos with BOTH Past and Present (strongest scoring potential)
 - **Card info on hover** — Insight value, suit icon, position affinity hints always visible. Player makes informed mathematical decisions under tarot aesthetics
 - **Hand carries over** — after placing Past (3 used), 9 remain. After Present (3 more), 6 remain. After Future (3 more), 3 return to deck for next client
 
@@ -269,7 +271,7 @@ Replace drag-and-drop placement with a poker-style row-by-row click-select syste
 - New component or ReadingScene refactor: RowPhaseManager
 - Tracks current row phase: PAST → PRESENT → FUTURE → DONE
 - Controls which spread slots are visible/active
-- "Place" button: enabled when exactly 3 cards selected
+- Space key input: confirm placement when exactly 3 cards selected
 - After confirm: animate selected cards into current row slots, lock them, advance phase
 
 **4.5.3 Per-Row Scoring Display**

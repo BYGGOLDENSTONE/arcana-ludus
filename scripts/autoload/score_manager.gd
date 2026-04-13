@@ -1,5 +1,5 @@
 extends Node
-## Scoring engine — Phase 4: chains, combos, and strict resolution order.
+## Scoring engine — Phase 4.5: supports per-row partial scoring and full resolution.
 ## Resolution: Base Insight → Position Match → Chains → Cross-Element → Numerological
 ## Talisman/Veil/Querent bonuses added in later phases.
 
@@ -27,8 +27,53 @@ func set_target(target: int) -> void:
 	target_score = target
 
 
+func score_row(row_cards: Array, all_placed_cards: Array) -> int:
+	## Score a single row's cards in the context of all placed cards so far.
+	## row_cards: Array of { slot, card, position_data } for this row only
+	## all_placed_cards: Array of { slot, card, position_data } for all placed so far (incl this row)
+	## Returns the row's score contribution.
+
+	var row_score := 0
+
+	# Calculate base insight + position match for row cards only
+	var row_entries: Array = []
+	for placed in row_cards:
+		var card: Node = placed.card
+		var pos_data: Resource = placed.position_data
+		var card_data: Resource = card.card_data
+
+		var match_result := MatchCalc.calculate_match(card_data, pos_data)
+
+		var entry := {
+			"card": card,
+			"card_data": card_data,
+			"position_data": pos_data,
+			"is_reversed": card.is_reversed,
+			"base_insight": card_data.base_insight,
+			"insight": card_data.base_insight,
+			"base_resonance": match_result.multiplier,
+			"resonance": match_result.multiplier,
+			"match_level": match_result.level,
+			"match_reasons": match_result.reasons,
+			"chain_bonuses": [] as Array[String],
+			"combo_bonuses": [] as Array[String],
+			"total": 0,
+		}
+		row_entries.append(entry)
+		card_scores.append(entry)
+
+	# Calculate totals for this row's entries
+	for entry in row_entries:
+		entry.total = int(entry.insight * entry.resonance)
+		row_score += entry.total
+
+	current_score += row_score
+	return row_score
+
+
 func score_reading(placed_cards: Array) -> int:
-	## Score all placed cards with full Phase 4 resolution order.
+	## Full scoring with chains and combos across all placed cards.
+	## Called after the final row (Future) is placed.
 	## placed_cards: Array of { slot, card, position_data }
 	## Returns total score.
 	reset_score()
@@ -92,24 +137,20 @@ func _apply_chain_bonus(chain: Dictionary) -> void:
 	var multiplier: float = chain.base_multiplier
 	var suit_name: String = chain.suit.capitalize()
 
-	# Base chain multiplier
 	for idx in chain.card_indices:
 		card_scores[idx].resonance *= multiplier
 		card_scores[idx].chain_bonuses.append("%s Chain x%.1f" % [suit_name, multiplier])
 
-	# Ace starter: +2 Resonance per card in chain
 	if chain.has_ace:
 		for idx in chain.card_indices:
 			card_scores[idx].resonance += chain.ace_bonus_per_card
 			card_scores[idx].chain_bonuses.append("Ace starter +2")
 
-	# 10 closer: chain Resonance x1.5
 	if chain.has_ten:
 		for idx in chain.card_indices:
 			card_scores[idx].resonance *= chain.ten_multiplier
 			card_scores[idx].chain_bonuses.append("10 closer x1.5")
 
-	# Perfect Chain (Ace + 10 same suit): x2
 	if chain.perfect_chain:
 		for idx in chain.card_indices:
 			card_scores[idx].resonance *= chain.perfect_multiplier
@@ -119,24 +160,20 @@ func _apply_chain_bonus(chain: Dictionary) -> void:
 func _apply_cross_element_combo(combo: Dictionary) -> void:
 	match combo.combo_id:
 		"steam":
-			# Both combo cards get x2 Insight
 			for idx in combo.card_indices:
 				card_scores[idx].insight *= 2
 				card_scores[idx].combo_bonuses.append("Steam: Insight x2")
 		"wildfire":
-			# All cards gain +3 Insight
 			for i in range(card_scores.size()):
 				card_scores[i].insight += 3
 				card_scores[i].combo_bonuses.append("Wildfire: +3 Insight")
 		"growth":
-			# Gold x2 — meta effect, no direct scoring change
 			meta_effects.append({
 				"type": "gold_multiplier", "value": 2, "source": "Growth"
 			})
 			for idx in combo.card_indices:
 				card_scores[idx].combo_bonuses.append("Growth: Gold x2")
 		"erosion":
-			# Lower-insight card contributes its base insight as Resonance to partner
 			var idx_a: int = combo.card_indices[0]
 			var idx_b: int = combo.card_indices[1]
 			var ins_a: int = card_scores[idx_a].base_insight
@@ -150,7 +187,6 @@ func _apply_cross_element_combo(combo: Dictionary) -> void:
 				card_scores[idx_b].combo_bonuses.append("Erosion: gave +%d Res" % int(ins_b * 0.5))
 				card_scores[idx_a].combo_bonuses.append("Erosion: +%d Resonance" % int(ins_b * 0.5))
 		"forge":
-			# +2 Insight to both cards + permanent upgrade meta effect
 			for idx in combo.card_indices:
 				card_scores[idx].insight += 2
 				card_scores[idx].combo_bonuses.append("Forge: +2 Insight")
@@ -159,7 +195,6 @@ func _apply_cross_element_combo(combo: Dictionary) -> void:
 				"card_indices": combo.card_indices.duplicate(),
 			})
 		"storm":
-			# x2 Resonance to both cards + Veil +2 meta effect
 			for idx in combo.card_indices:
 				card_scores[idx].resonance *= 2.0
 				card_scores[idx].combo_bonuses.append("Storm: Resonance x2")
@@ -171,22 +206,18 @@ func _apply_cross_element_combo(combo: Dictionary) -> void:
 func _apply_numerological_combo(combo: Dictionary) -> void:
 	match combo.type:
 		"pair":
-			# +5 Insight each
 			for idx in combo.card_indices:
 				card_scores[idx].insight += 5
 				card_scores[idx].combo_bonuses.append("Pair: +5 Insight")
 		"triple":
-			# x2 Resonance to all three
 			for idx in combo.card_indices:
 				card_scores[idx].resonance *= 2.0
 				card_scores[idx].combo_bonuses.append("Triple: Resonance x2")
 		"quad":
-			# x5 Resonance to all four
 			for idx in combo.card_indices:
 				card_scores[idx].resonance *= 5.0
 				card_scores[idx].combo_bonuses.append("Perfect Harmony: Resonance x5")
 		"run":
-			# +5 Insight per card in run
 			for idx in combo.card_indices:
 				card_scores[idx].insight += 5
 				card_scores[idx].combo_bonuses.append("Run: +5 Insight")

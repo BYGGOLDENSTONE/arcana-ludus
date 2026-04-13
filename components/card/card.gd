@@ -1,11 +1,9 @@
 extends Node2D
 ## Visual and interactive representation of a single tarot card.
+## Phase 4.5: click-select only, no drag-and-drop.
 
-signal clicked(card: Node2D)
 signal selected(card: Node2D)
 signal deselected(card: Node2D)
-signal drag_started(card: Node2D)
-signal drag_ended(card: Node2D)
 signal hovered(card: Node2D)
 signal unhovered(card: Node2D)
 
@@ -14,24 +12,19 @@ signal unhovered(card: Node2D)
 ## At SELECTED_SCALE 0.38 → 133x228 rendered pixels
 const NORMAL_SCALE := Vector2(0.30, 0.30)
 const SELECTED_SCALE := Vector2(0.38, 0.38)
-const DRAG_OPACITY := 0.85
 const FLIP_DURATION := 0.4
-const DRAG_THRESHOLD := 8.0
 
 const CardDataScript = preload("res://scripts/resources/card_data.gd")
 var card_data: Resource
 var is_reversed: bool = false
 var is_face_up: bool = true
 var is_in_hand: bool = false
-var is_dragging: bool = false
 var is_hovered: bool = false
 var is_selected: bool = false
+var is_locked: bool = false
 
-var _drag_offset: Vector2 = Vector2.ZERO
 var _original_position: Vector2 = Vector2.ZERO
 var _original_z_index: int = 0
-var _mouse_press_pos: Vector2 = Vector2.ZERO
-var _mouse_pressed: bool = false
 
 @onready var card_visual: Node2D = $CardVisual
 @onready var card_front: Node2D = $CardVisual/CardFront
@@ -56,6 +49,8 @@ func _ready() -> void:
 func setup(data: Resource) -> void:
 	card_data = data
 	is_face_up = true
+	is_reversed = false
+	is_locked = false
 	_update_visuals()
 
 
@@ -89,7 +84,7 @@ func _update_face_visibility() -> void:
 
 
 func select() -> void:
-	if is_selected:
+	if is_selected or is_locked:
 		return
 	is_selected = true
 	if select_glow:
@@ -164,69 +159,20 @@ func _toggle_reversed() -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if not is_hovered:
+	if not is_hovered or is_locked:
 		return
 
 	if event is InputEventMouseButton:
 		var mb := event as InputEventMouseButton
-		if mb.button_index == MOUSE_BUTTON_LEFT:
-			if mb.pressed:
-				_mouse_pressed = true
-				_mouse_press_pos = mb.global_position
-			else:
-				if _mouse_pressed:
-					var distance := _mouse_press_pos.distance_to(mb.global_position)
-					if is_dragging:
-						_end_drag()
-					elif distance < DRAG_THRESHOLD:
-						if is_selected:
-							deselect()
-						else:
-							select()
-					_mouse_pressed = false
-		elif mb.button_index == MOUSE_BUTTON_RIGHT and mb.pressed:
-			if is_face_up:
-				flip_orientation()
-
-	elif event is InputEventMouseMotion and _mouse_pressed:
-		var distance := _mouse_press_pos.distance_to(event.global_position)
-		if distance >= DRAG_THRESHOLD and not is_dragging:
-			_start_drag(_mouse_press_pos)
-		if is_dragging:
-			global_position = event.global_position + _drag_offset
-
-
-func _start_drag(mouse_pos: Vector2) -> void:
-	is_dragging = true
-	_drag_offset = global_position - mouse_pos
-	_original_position = global_position
-	_original_z_index = z_index
-	z_index = 100
-	modulate.a = DRAG_OPACITY
-	drag_started.emit(self)
-	EventBus.card_drag_started.emit(self)
-
-
-func _end_drag() -> void:
-	if not is_dragging:
-		return
-	is_dragging = false
-	z_index = _original_z_index
-	modulate.a = 1.0
-	drag_ended.emit(self)
-	EventBus.card_drag_ended.emit(self, global_position)
-	# If not placed on a spread slot, return to hand.
-	# SpreadRenderer handles placement via EventBus.card_drag_ended.
-	# It sets is_in_hand = false when placed successfully.
-	if is_in_hand:
-		_return_to_hand()
-
-
-func _return_to_hand() -> void:
-	var tween := create_tween()
-	tween.set_ease(Tween.EASE_OUT)
-	tween.set_trans(Tween.TRANS_BACK)
-	tween.tween_property(self, "global_position", _original_position, 0.3)
+		if mb.pressed:
+			if mb.button_index == MOUSE_BUTTON_LEFT:
+				if is_selected:
+					deselect()
+				else:
+					select()
+			elif mb.button_index == MOUSE_BUTTON_RIGHT:
+				if is_selected and is_face_up:
+					flip_orientation()
 
 
 func _on_mouse_entered() -> void:

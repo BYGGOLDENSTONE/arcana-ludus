@@ -1,27 +1,23 @@
 extends Node2D
-## Renders the 3×3 spread grid and manages card placement into slots.
+## Renders the 3×3 spread grid and manages row-by-row card placement.
+## Phase 4.5: no drag-drop. Cards placed programmatically per row.
 
 signal card_placed(slot: Node2D, card: Node2D)
+signal row_filled(row: int)
 signal all_slots_filled()
-signal slot_hover_started(slot: Node2D, card: Node2D)
-signal slot_hover_ended(slot: Node2D)
 
 const SpreadSlotScene := preload("res://components/spread/spread_slot.tscn")
 const MatchCalc = preload("res://scripts/utils/match_calculator.gd")
 const SLOT_SPACING := Vector2(165, 245)
 const ROW_LABELS := ["Past", "Present", "Future"]
+const ROW_NAMES := ["past", "present", "future"]
 
 var spread_data: Resource  # SpreadData
 var slots: Array[Node2D] = []
-var _dragging_card: Node2D = null
+var _active_row: int = -1
 
 @onready var slot_container: Node2D = $SlotContainer
 @onready var row_label_container: Node2D = $RowLabels
-
-
-func _ready() -> void:
-	EventBus.card_drag_started.connect(_on_card_drag_started)
-	EventBus.card_drag_ended.connect(_on_card_drag_ended)
 
 
 func setup(data: Resource) -> void:
@@ -44,8 +40,6 @@ func _create_slots() -> void:
 		)
 		slot.position = offset
 		slot.setup(pos_data)
-		slot.slot_hovered.connect(_on_slot_hovered)
-		slot.slot_unhovered.connect(_on_slot_unhovered)
 		slots.append(slot)
 
 
@@ -72,53 +66,43 @@ func _clear_slots() -> void:
 	slots.clear()
 
 
-func _on_card_drag_started(card: Node2D) -> void:
-	_dragging_card = card
+func set_active_row(row: int) -> void:
+	_active_row = row
+	for i in range(slots.size()):
+		var slot: Node2D = slots[i]
+		var slot_row: int = slot.position_data.row
+		if slot_row == row:
+			slot.set_active(true)
+		elif slot.is_occupied:
+			slot.set_locked()
+		else:
+			slot.set_active(false)
+
+	# Update row labels
+	var labels := row_label_container.get_children()
+	for r in range(labels.size()):
+		var label: Label = labels[r]
+		if r == row:
+			label.add_theme_color_override("font_color", Color(0.90, 0.75, 0.30, 1.0))
+		elif r < row:
+			label.add_theme_color_override("font_color", Color(0.50, 0.45, 0.35, 0.5))
+		else:
+			label.add_theme_color_override("font_color", Color(0.78, 0.70, 0.50, 0.7))
 
 
-func _on_card_drag_ended(card: Node2D, drop_pos: Vector2) -> void:
-	if not _dragging_card:
-		return
-
-	# Adjust drop position to account for CardVisual offset (card image center vs node origin)
-	var visual_center: Vector2 = drop_pos - Vector2(0, 300.0 * card.scale.y)
-	var closest_slot: Node2D = _find_closest_slot(visual_center)
-	if closest_slot and not closest_slot.is_occupied:
-		_place_card_in_slot(card, closest_slot)
-
-	_dragging_card = null
-	_clear_all_previews()
+func place_cards_in_row(row: int, card_nodes: Array) -> void:
+	## Place cards into the given row's slots (auto-assign left to right).
+	var row_slots := get_row_slots(row)
+	for i in range(mini(card_nodes.size(), row_slots.size())):
+		var card: Node2D = card_nodes[i]
+		var slot: Node2D = row_slots[i]
+		_place_card_in_slot(card, slot, i)
 
 
-func _on_slot_hovered(slot: Node2D) -> void:
-	if _dragging_card and not slot.is_occupied:
-		var match_result := MatchCalc.calculate_match(
-			_dragging_card.card_data, slot.position_data)
-		slot.show_match_preview(match_result.color)
-		slot_hover_started.emit(slot, _dragging_card)
-
-
-func _on_slot_unhovered(slot: Node2D) -> void:
-	slot.clear_match_preview()
-	slot_hover_ended.emit(slot)
-
-
-func _find_closest_slot(pos: Vector2) -> Node2D:
-	var best_slot: Node2D = null
-	var best_dist := 200.0  # max snap distance
-	for slot in slots:
-		if slot.is_occupied:
-			continue
-		var dist := pos.distance_to(slot.global_position)
-		if dist < best_dist:
-			best_dist = dist
-			best_slot = slot
-	return best_slot
-
-
-func _place_card_in_slot(card: Node2D, slot: Node2D) -> void:
+func _place_card_in_slot(card: Node2D, slot: Node2D, delay_index: int) -> void:
 	slot.place_card(card)
 	card.is_in_hand = false
+	card.is_locked = true
 
 	# Reparent card from hand to spread container
 	var saved_global_pos := card.global_position
@@ -127,44 +111,66 @@ func _place_card_in_slot(card: Node2D, slot: Node2D) -> void:
 	slot_container.add_child(card)
 	card.global_position = saved_global_pos
 
-	# CardVisual is at local y=-300, so we offset to center card image on slot
+	# CardVisual is at local y=-300, so offset to center card image on slot
 	var visual_offset := Vector2(0, 300.0 * card.scale.y)
 	var target_pos: Vector2 = slot.get_snap_position() + visual_offset
 
-	# Animate card snapping into position
+	# Staggered animation for each card in the row
 	var tween := card.create_tween()
 	tween.set_ease(Tween.EASE_OUT)
 	tween.set_trans(Tween.TRANS_BACK)
-	tween.tween_property(card, "global_position", target_pos, 0.25)
+	if delay_index > 0:
+		tween.tween_interval(delay_index * 0.12)
+	tween.tween_property(card, "global_position", target_pos, 0.3)
+	tween.tween_property(card, "scale", card.NORMAL_SCALE, 0.15)
 	tween.tween_callback(func():
 		card.z_index = 10
+		if card.select_glow:
+			card.select_glow.visible = false
 	)
 
 	card_placed.emit(slot, card)
 	EventBus.card_placed_on_spread.emit(card, slot)
 
-	if _all_filled():
-		all_slots_filled.emit()
-		EventBus.all_spread_slots_filled.emit()
+
+func lock_row(row: int) -> void:
+	for slot in get_row_slots(row):
+		slot.set_locked()
 
 
-func _all_filled() -> bool:
+func get_row_slots(row: int) -> Array:
+	var result: Array = []
 	for slot in slots:
+		if slot.position_data.row == row:
+			result.append(slot)
+	# Sort by column
+	result.sort_custom(func(a, b): return a.position_data.col < b.position_data.col)
+	return result
+
+
+func is_row_filled(row: int) -> bool:
+	for slot in get_row_slots(row):
 		if not slot.is_occupied:
 			return false
 	return true
-
-
-func _clear_all_previews() -> void:
-	for slot in slots:
-		if not slot.is_occupied:
-			slot.clear_match_preview()
 
 
 func get_placed_cards() -> Array:
 	## Returns array of { slot: Node2D, card: Node2D, position_data: Resource }
 	var result: Array = []
 	for slot in slots:
+		if slot.is_occupied:
+			result.append({
+				"slot": slot,
+				"card": slot.placed_card,
+				"position_data": slot.position_data,
+			})
+	return result
+
+
+func get_row_placed_cards(row: int) -> Array:
+	var result: Array = []
+	for slot in get_row_slots(row):
 		if slot.is_occupied:
 			result.append({
 				"slot": slot,

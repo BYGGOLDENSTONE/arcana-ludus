@@ -4,14 +4,13 @@ extends Node
 
 # -- Card signals --
 signal card_clicked(card: Node)
-signal card_drag_started(card: Node)
-signal card_drag_ended(card: Node, global_pos: Vector2)
 signal card_flipped(card: Node, is_reversed: bool)
 signal card_hovered(card: Node)
 signal card_unhovered(card: Node)
 
 # -- Hand signals --
 signal hand_updated(card_count: int)
+signal hand_selection_changed(selected_count: int)
 
 # -- Deck signals --
 signal deck_shuffled()
@@ -31,6 +30,11 @@ signal scoring_completed(total_score: int)
 # -- Chain & Combo signals (Phase 4) --
 signal chain_detected(chain_data: Dictionary)
 signal combo_detected(combo_data: Dictionary)
+
+# -- Row phase signals (Phase 4.5) --
+signal row_phase_changed(phase: int, row_name: String)
+signal row_placed(row: int, cards: Array)
+signal row_scored(row: int, row_score: int, total_score: int)
 
 # -- Veil signals (Phase 5+) --
 signal veil_changed(old_value: int, new_value: int)

@@ -11,10 +11,10 @@
 - **Repo:** github.com/BYGGOLDENSTONE/arcana-ludus
 
 ## Current Phase
-- **Phase:** Phase 4 (Chains & Combos) complete → Ready for Phase 4.5 (Placement Refactor)
+- **Phase:** Phase 4.5 (Placement Refactor) — COMPLETE
 - **Target:** Playable Steam Demo (Act I, full juice)
-- **Next Step:** Begin Phase 4.5 — Placement Refactor (drag-drop → poker-style row-by-row click-select)
-- **Upcoming:** Phase 5 — Veil & Talismans
+- **Next Step:** Begin Phase 5 — Veil & Talismans
+- **Upcoming:** Phase 6 — Juice & Polish
 
 ## Development Rules
 
@@ -61,7 +61,7 @@
 ### Autoload Singletons (7)
 - `GameManager` — run state, current act/querent, lives, gold, reputation, night tracking
 - `DeckManager` — player deck, draw pile, discard, hand, sideboard (removed cards still owned)
-- `ScoreManager` — scoring engine with Phase 4 resolution order (chains, combos)
+- `ScoreManager` — scoring engine with per-row partial scoring + full resolution (chains, combos)
 - `VeilManager` — Veil counter, tier tracking
 - `DataLoader` — loads card/spread/talisman/querent definitions
 - `AudioManager` — SFX and music bus management
@@ -124,8 +124,13 @@ res://
 
 ## Core Loop — Night System (Implemented)
 - **1 Night = 1 Round** — Player serves clients; night ends by player choice (after min clients) or when deck runs out
-- **3×3 Spread** — 9 positions (Past/Present/Future × 3), all readings use this layout
-- **Hand:** Draw 12 cards per client, place 9, unused return to deck
+- **Row-by-Row Placement (Phase 4.5):** No drag-and-drop. Player clicks cards to select (max 3), presses Space to confirm. Rows resolve in order: Past → Present → Future
+  - **Past:** Select 3 cards from 12-card hand → Space to place → row scores immediately
+  - **Present:** Select 3 from remaining 9 → Space to place → scores + combos with Past
+  - **Future:** Select 3 from remaining 6 → Space to place → FULL scoring (combos with Past + Present). 3 unused cards return to deck
+  - **Card position within row doesn't matter** — auto-assigned left to right
+  - **Right-click to reverse** a selected card before confirming
+- **Hand:** Draw 12 cards per client, place 9 (3 per row), 3 unused return to deck
 - **Starting deck:** 22 Major Arcana. Minor Arcana acquired through shop
 - **Reputation:** Rejecting/failing clients lowers reputation → less gold earned (0.5x–1.5x multiplier)
 - **Escalation:** Target scores scale by night number (~120 + night×100), small variance within a night
@@ -154,6 +159,7 @@ res://
 - [x] Phase 2: Core Mechanics
 - [x] Phase 3: Game Loop
 - [x] Phase 4: Chains & Combos
+- [x] Phase 4.5: Placement Refactor (row-by-row click-select)
 - [ ] Phase 5: Veil & Talismans
 - [ ] Phase 6: Juice & Polish
 - [ ] Phase 7: Content & Balance
