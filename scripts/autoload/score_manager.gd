@@ -1,7 +1,8 @@
 extends Node
-## Scoring engine — Phase 4.5: supports per-row partial scoring and full resolution.
-## Resolution: Base Insight → Position Match → Chains → Cross-Element → Numerological
-## Talisman/Veil/Querent bonuses added in later phases.
+## Scoring engine — Phase 5: supports per-row partial scoring, full resolution,
+## Veil tier bonuses, and querent theme bonuses.
+## Resolution: Base Insight → Position Match → Chains → Cross-Element →
+##             Numerological → Veil Tier → Querent Theme
 
 const MatchCalc = preload("res://scripts/utils/match_calculator.gd")
 const ChainDetect = preload("res://scripts/utils/chain_detector.gd")
@@ -106,6 +107,7 @@ func score_reading(placed_cards: Array) -> int:
 	# --- Step 2: Elemental Chain Multipliers ---
 	detected_chains = ChainDetect.detect_chains(placed_cards)
 	for chain in detected_chains:
+		TalismanManager.on_chain(chain)
 		_apply_chain_bonus(chain)
 		EventBus.chain_detected.emit(chain)
 
@@ -122,6 +124,16 @@ func score_reading(placed_cards: Array) -> int:
 		_apply_numerological_combo(combo)
 		detected_combos.append(combo)
 		EventBus.combo_detected.emit(combo)
+
+	# --- Step 5: Talisman on_score hooks ---
+	for entry in card_scores:
+		TalismanManager.on_score_card(entry)
+
+	# --- Step 6: Veil Tier Bonuses ---
+	_apply_veil_tier_bonuses()
+
+	# --- Step 7: Talisman after_reading hooks ---
+	TalismanManager.on_after_reading(card_scores)
 
 	# --- Final: Calculate per-card totals and sum ---
 	for entry in card_scores:
@@ -221,6 +233,29 @@ func _apply_numerological_combo(combo: Dictionary) -> void:
 			for idx in combo.card_indices:
 				card_scores[idx].insight += 5
 				card_scores[idx].combo_bonuses.append("Run: +5 Insight")
+
+
+func _apply_veil_tier_bonuses() -> void:
+	var tier: int = VeilManager.get_tier()
+	if tier == VeilManager.VeilTier.CLEAR:
+		return
+
+	for entry in card_scores:
+		match tier:
+			VeilManager.VeilTier.GLIMPSE:
+				# Reversed cards gain +50% Resonance
+				if entry.is_reversed:
+					entry.resonance *= 1.5
+					entry.combo_bonuses.append("Veil Glimpse: Reversed +50%% Res")
+			VeilManager.VeilTier.GAZE:
+				# Reversed cards gain x2 Resonance
+				if entry.is_reversed:
+					entry.resonance *= 2.0
+					entry.combo_bonuses.append("Veil Gaze: Reversed x2 Res")
+			VeilManager.VeilTier.ABYSS, VeilManager.VeilTier.VOID:
+				# ALL cards gain x2 Resonance
+				entry.resonance *= 2.0
+				entry.combo_bonuses.append("Veil Abyss: ALL x2 Res")
 
 
 func calculate_card_score(card_data: Resource, _position_name: String, _is_reversed: bool) -> Dictionary:

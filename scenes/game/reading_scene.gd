@@ -9,7 +9,7 @@ const CARD_SCENE := preload("res://components/card/card.tscn")
 const SpreadDataScript = preload("res://scripts/resources/spread_data.gd")
 const HAND_SIZE := 12
 const CARDS_PER_ROW := 3
-const ROW_NAMES := ["Past", "Present", "Future"]
+const ROW_NAMES: Array[String] = ["Past", "Present", "Future"]
 
 enum RowPhase { PAST = 0, PRESENT = 1, FUTURE = 2, DONE = 3 }
 
@@ -21,8 +21,10 @@ enum RowPhase { PAST = 0, PRESENT = 1, FUTURE = 2, DONE = 3 }
 @onready var info_label: Label = $UI/InfoLabel
 @onready var placed_count_label: Label = $UI/PlacedCountLabel
 @onready var querent_info_label: Label = $UI/QuerentInfoLabel
+@onready var veil_label: Label = $UI/VeilLabel
 
 var _reading_active: bool = false
+var _base_target: int = 0
 var _current_phase: RowPhase = RowPhase.PAST
 var _current_querent: Resource = null
 var _hand_card_data: Array = []
@@ -67,13 +69,18 @@ func start_reading(querent: Resource) -> void:
 	var spread_data: Resource = SpreadDataScript.create_standard_spread()
 	spread.setup(spread_data)
 
-	# Set target from querent
-	ScoreManager.set_target(querent.target_score)
+	# Set target from querent (adjusted for Veil tier)
+	_base_target = querent.target_score
+	ScoreManager.set_target(VeilManager.get_adjusted_target(_base_target))
 	ScoreManager.reset_score()
 	_update_target_display()
+	_update_veil_display()
 
 	# Display querent info
 	_update_querent_display()
+
+	# Trigger talisman before_reading hooks
+	TalismanManager.on_before_reading()
 
 	# Draw hand from DeckManager
 	_draw_hand()
@@ -142,11 +149,11 @@ func _confirm_placement() -> void:
 	if _current_phase == RowPhase.DONE:
 		return
 
-	var selected := hand.get_selected_cards()
+	var selected: Array = hand.get_selected_cards()
 	if selected.size() != CARDS_PER_ROW:
 		return
 
-	var row := int(_current_phase)
+	var row: int = int(_current_phase)
 
 	# Remove selected cards from hand (don't free them — spread takes ownership)
 	hand.remove_cards(selected)
@@ -159,6 +166,21 @@ func _confirm_placement() -> void:
 
 	# Emit row placed signal
 	EventBus.row_placed.emit(row, selected)
+
+	# Process Veil accumulation for placed cards
+	var veil_entries: Array = []
+	for card_node in selected:
+		veil_entries.append({
+			"card": card_node,
+			"card_data": card_node.card_data,
+			"is_reversed": card_node.is_reversed,
+		})
+	VeilManager.process_placed_cards(veil_entries)
+
+	# Update target based on new Veil tier
+	ScoreManager.set_target(VeilManager.get_adjusted_target(_base_target))
+	_update_target_display()
+	_update_veil_display()
 
 	# Score this row
 	if _current_phase == RowPhase.FUTURE:
@@ -173,9 +195,9 @@ func _confirm_placement() -> void:
 
 
 func _do_row_scoring(row: int) -> void:
-	var row_cards := spread.get_row_placed_cards(row)
-	var all_cards := spread.get_placed_cards()
-	var row_score := ScoreManager.score_row(row_cards, all_cards)
+	var row_cards: Array = spread.get_row_placed_cards(row)
+	var all_cards: Array = spread.get_placed_cards()
+	var row_score: int = ScoreManager.score_row(row_cards, all_cards)
 	_row_scores[row] = row_score
 
 	EventBus.row_scored.emit(row, row_score, ScoreManager.current_score)
@@ -188,8 +210,19 @@ func _do_row_scoring(row: int) -> void:
 
 
 func _do_full_scoring() -> void:
-	var all_cards := spread.get_placed_cards()
-	var total := ScoreManager.score_reading(all_cards)
+	var all_cards: Array = spread.get_placed_cards()
+	var total: int = ScoreManager.score_reading(all_cards)
+
+	# Process end-of-reading Veil bonus (all-upright = -1)
+	var veil_entries: Array = []
+	for entry in all_cards:
+		veil_entries.append({
+			"card": entry.card,
+			"card_data": entry.card.card_data,
+			"is_reversed": entry.card.is_reversed,
+		})
+	VeilManager.process_end_of_reading(veil_entries)
+	_update_veil_display()
 
 	score_label.text = "Score: %d" % total
 
@@ -197,8 +230,8 @@ func _do_full_scoring() -> void:
 	_show_full_breakdown()
 
 	# Build result text
-	var target := ScoreManager.target_score
-	var met := ScoreManager.is_target_met()
+	var target: int = ScoreManager.target_score
+	var met: bool = ScoreManager.is_target_met()
 
 	var result_parts: Array = []
 	if met:
@@ -206,7 +239,7 @@ func _do_full_scoring() -> void:
 	else:
 		result_parts.append("Score %d / %d -- Not enough..." % [total, target])
 
-	var chains := ScoreManager.get_detected_chains()
+	var chains: Array = ScoreManager.get_detected_chains()
 	if not chains.is_empty():
 		var chain_names: Array = []
 		for chain in chains:
@@ -216,12 +249,18 @@ func _do_full_scoring() -> void:
 				chain_names[-1] += " PERFECT!"
 		result_parts.append("Chains: %s" % ", ".join(chain_names))
 
-	var combos := ScoreManager.get_detected_combos()
+	var combos: Array = ScoreManager.get_detected_combos()
 	if not combos.is_empty():
 		var combo_names: Array = []
 		for combo in combos:
 			combo_names.append(combo.name)
 		result_parts.append("Combos: %s" % ", ".join(combo_names))
+
+	# Show Veil tier info if active
+	var tier: int = VeilManager.get_tier()
+	if tier != VeilManager.VeilTier.CLEAR:
+		var tier_names: Array[String] = ["Clear", "Glimpse", "Gaze", "Abyss", "VOID"]
+		result_parts.append("Veil: %d (%s)" % [VeilManager.veil_value, tier_names[tier]])
 
 	info_label.text = " | ".join(result_parts)
 
@@ -292,8 +331,8 @@ func _update_phase_display() -> void:
 		phase_button.disabled = true
 		return
 
-	var row_name := ROW_NAMES[_current_phase]
-	var cards_remaining := hand.cards.size()
+	var row_name: String = ROW_NAMES[_current_phase]
+	var cards_remaining: int = hand.cards.size()
 	placed_count_label.text = "%s Row | %d cards in hand" % [row_name, cards_remaining]
 	info_label.text = "Select 3 cards for the %s row. Right-click to reverse." % row_name
 	phase_button.text = "Select 3 cards"
@@ -301,7 +340,7 @@ func _update_phase_display() -> void:
 
 
 func _show_row_breakdown(row: int) -> void:
-	var row_cards := spread.get_row_placed_cards(row)
+	var row_cards: Array = spread.get_row_placed_cards(row)
 	for entry_data in row_cards:
 		var card: Node = entry_data.card
 		# Find this card's score entry
@@ -323,14 +362,42 @@ func _show_full_breakdown() -> void:
 
 
 func _update_target_display() -> void:
-	target_label.text = "Target: %d" % ScoreManager.target_score
+	var tier: int = VeilManager.get_tier()
+	if tier != VeilManager.VeilTier.CLEAR:
+		target_label.text = "Target: %d (Veil +%d%%)" % [
+			ScoreManager.target_score,
+			int((VeilManager.get_target_multiplier() - 1.0) * 100),
+		]
+	else:
+		target_label.text = "Target: %d" % ScoreManager.target_score
+
+
+func _update_veil_display() -> void:
+	if not veil_label:
+		return
+	var tier_names: Array[String] = ["Clear", "Glimpse", "Gaze", "Abyss", "VOID"]
+	var tier: int = VeilManager.get_tier()
+	veil_label.text = "Veil: %d / %d (%s)" % [VeilManager.veil_value, VeilManager.veil_cap, tier_names[tier]]
+
+	# Color-code by tier
+	match tier:
+		VeilManager.VeilTier.CLEAR:
+			veil_label.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7, 1.0))
+		VeilManager.VeilTier.GLIMPSE:
+			veil_label.add_theme_color_override("font_color", Color(0.5, 0.5, 0.85, 1.0))
+		VeilManager.VeilTier.GAZE:
+			veil_label.add_theme_color_override("font_color", Color(0.6, 0.3, 0.8, 1.0))
+		VeilManager.VeilTier.ABYSS:
+			veil_label.add_theme_color_override("font_color", Color(0.85, 0.2, 0.2, 1.0))
+		VeilManager.VeilTier.VOID:
+			veil_label.add_theme_color_override("font_color", Color(1.0, 0.0, 0.0, 1.0))
 
 
 func _on_card_hovered(card: Node) -> void:
 	if not card.card_data or _current_phase == RowPhase.DONE:
 		return
-	var orientation := "REVERSED" if card.is_reversed else "Upright"
-	var selected_text := " [SELECTED]" if card.is_selected else ""
+	var orientation: String = "REVERSED" if card.is_reversed else "Upright"
+	var selected_text: String = " [SELECTED]" if card.is_selected else ""
 	info_label.text = "%s | %s | Insight: %d | %s%s" % [
 		card.card_data.card_name,
 		card.card_data.suit.capitalize(),
@@ -349,5 +416,5 @@ func _on_card_unhovered(_card: Node) -> void:
 func _on_card_flipped(card: Node, is_reversed: bool) -> void:
 	if not card.card_data:
 		return
-	var orientation := "REVERSED" if is_reversed else "Upright"
+	var orientation: String = "REVERSED" if is_reversed else "Upright"
 	info_label.text = "%s flipped to %s" % [card.card_data.card_name, orientation]

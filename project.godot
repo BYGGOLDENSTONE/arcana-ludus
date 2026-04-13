@@ -23,6 +23,8 @@ GameManager="*res://scripts/autoload/game_manager.gd"
 DeckManager="*res://scripts/autoload/deck_manager.gd"
 ScoreManager="*res://scripts/autoload/score_manager.gd"
 VeilManager="*res://scripts/autoload/veil_manager.gd"
+TalismanEffects="*res://scripts/utils/talisman_effects.gd"
+TalismanManager="*res://scripts/autoload/talisman_manager.gd"
 AudioManager="*res://scripts/autoload/audio_manager.gd"
 
 [display]

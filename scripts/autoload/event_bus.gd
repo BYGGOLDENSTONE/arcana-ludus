@@ -36,9 +36,17 @@ signal row_phase_changed(phase: int, row_name: String)
 signal row_placed(row: int, cards: Array)
 signal row_scored(row: int, row_score: int, total_score: int)
 
-# -- Veil signals (Phase 5+) --
+# -- Veil signals (Phase 5) --
 signal veil_changed(old_value: int, new_value: int)
 signal veil_tier_changed(new_tier: int)
+signal veil_void_triggered()
+signal veil_card_processed(card_name: String, veil_amount: int)
+signal cleanse_ritual_performed()
+
+# -- Talisman signals (Phase 5) --
+signal talisman_added(talisman_data: Resource)
+signal talisman_removed(talisman_data: Resource)
+signal talisman_triggered(talisman_id: String, effect_description: String)
 
 # -- Game flow signals (Phase 3+) --
 signal run_started()

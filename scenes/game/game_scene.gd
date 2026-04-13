@@ -16,6 +16,8 @@ const SHOP_SCENE := preload("res://scenes/shop/shop_scene.tscn")
 @onready var gold_label: Label = $UI/HUD/HBoxContainer/GoldLabel
 @onready var deck_label: Label = $UI/HUD/HBoxContainer/DeckLabel
 @onready var reputation_label: Label = $UI/HUD/HBoxContainer/ReputationLabel
+@onready var veil_hud_label: Label = $UI/HUD/HBoxContainer/VeilHudLabel
+@onready var talisman_hud_label: Label = $UI/HUD/HBoxContainer/TalismanHudLabel
 
 # Querent panel
 @onready var querent_panel: PanelContainer = $UI/QuerentPanel
@@ -25,6 +27,7 @@ const SHOP_SCENE := preload("res://scenes/shop/shop_scene.tscn")
 @onready var personality_label: Label = $UI/QuerentPanel/MarginContainer/VBoxContainer/PersonalityLabel
 @onready var accept_button: Button = $UI/QuerentPanel/MarginContainer/VBoxContainer/ButtonRow/AcceptButton
 @onready var reject_button: Button = $UI/QuerentPanel/MarginContainer/VBoxContainer/ButtonRow/RejectButton
+@onready var cleanse_button: Button = $UI/QuerentPanel/MarginContainer/VBoxContainer/ButtonRow/CleanseButton
 
 # Result panel
 @onready var result_panel: PanelContainer = $UI/ResultPanel
@@ -58,6 +61,7 @@ func _ready() -> void:
 	# Connect buttons
 	accept_button.pressed.connect(_on_accept_pressed)
 	reject_button.pressed.connect(_on_reject_pressed)
+	cleanse_button.pressed.connect(_on_cleanse_pressed)
 	continue_button.pressed.connect(_on_continue_pressed)
 	next_night_button.pressed.connect(_on_next_night_pressed)
 	restart_button.pressed.connect(_on_restart_pressed)
@@ -74,6 +78,8 @@ func _ready() -> void:
 	EventBus.deck_shuffled.connect(_update_deck_display)
 	EventBus.hand_updated.connect(_on_hand_updated)
 	EventBus.card_drawn.connect(_on_card_drawn)
+	EventBus.veil_changed.connect(_on_veil_changed)
+	EventBus.veil_void_triggered.connect(_on_veil_void_triggered)
 
 	# Initialize run
 	_start_run()
@@ -85,6 +91,8 @@ func _start_run() -> void:
 	DeckManager.init_deck(starting_cards)
 
 	GameManager.start_new_run()
+	VeilManager.reset_veil()
+	TalismanManager.reset()
 	_update_hud()
 
 	# Start first night
@@ -107,6 +115,10 @@ func _on_querent_arrived(querent: Resource) -> void:
 		reject_button.text = "End the Night"
 	else:
 		reject_button.text = "Reject"
+
+	# Show cleanse button only when Veil > 0
+	cleanse_button.visible = VeilManager.veil_value > 0
+	cleanse_button.text = "Cleanse (Veil: %d → 0)" % VeilManager.veil_value
 
 
 func _on_querent_accepted(_querent: Resource) -> void:
@@ -158,6 +170,19 @@ func _on_card_drawn(_card_data: Resource) -> void:
 	_update_deck_display()
 
 
+func _on_veil_changed(_old_value: int, _new_value: int) -> void:
+	_update_veil_hud()
+
+
+func _on_veil_void_triggered() -> void:
+	# The Void: Veil reached max — run ends
+	if _reading_instance:
+		_reading_instance.cleanup()
+		_reading_instance.visible = false
+	_hide_all_panels()
+	_show_game_over_panel(false, true)  # void death
+
+
 # -- Button handlers --
 
 func _on_accept_pressed() -> void:
@@ -169,6 +194,13 @@ func _on_reject_pressed() -> void:
 		night_manager.end_night_by_choice()
 	else:
 		night_manager.reject_querent()
+
+
+func _on_cleanse_pressed() -> void:
+	# Cleanse ritual: skip this querent, reset Veil to 0, lose querent reward
+	VeilManager.perform_cleanse()
+	night_manager.reject_querent()
+	_update_hud()
 
 
 func _on_continue_pressed() -> void:
@@ -290,10 +322,17 @@ func _show_night_end_panel(night_number: int) -> void:
 	night_end_panel.visible = true
 
 
-func _show_game_over_panel(victory: bool) -> void:
+func _show_game_over_panel(victory: bool, void_death: bool = false) -> void:
 	if victory:
 		game_over_title.text = "Victory!"
 		game_over_message.text = "You completed all nights."
+	elif void_death:
+		game_over_title.text = "The Void Consumes You"
+		game_over_message.text = "The Veil tore open... darkness swallowed everything.\nNight reached: %d\nGold earned: %d" % [
+			GameManager.current_night,
+			GameManager.gold,
+		]
+		game_over_title.add_theme_color_override("font_color", Color(0.6, 0.0, 0.0, 1.0))
 	else:
 		game_over_title.text = "Game Over"
 		game_over_message.text = "You lost all your lives.\nNight reached: %d\nGold earned: %d" % [
@@ -318,6 +357,41 @@ func _update_hud() -> void:
 	gold_label.text = "Gold: %d" % GameManager.gold
 	reputation_label.text = "Rep: x%.1f" % GameManager.reputation
 	_update_deck_display()
+	_update_veil_hud()
+	_update_talisman_hud()
+
+
+func _update_veil_hud() -> void:
+	if not veil_hud_label:
+		return
+	var tier_names := ["Clear", "Glimpse", "Gaze", "Abyss", "VOID"]
+	var tier: int = VeilManager.get_tier()
+	veil_hud_label.text = "Veil: %d (%s)" % [VeilManager.veil_value, tier_names[tier]]
+
+	match tier:
+		VeilManager.VeilTier.CLEAR:
+			veil_hud_label.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7, 1.0))
+		VeilManager.VeilTier.GLIMPSE:
+			veil_hud_label.add_theme_color_override("font_color", Color(0.5, 0.5, 0.85, 1.0))
+		VeilManager.VeilTier.GAZE:
+			veil_hud_label.add_theme_color_override("font_color", Color(0.6, 0.3, 0.8, 1.0))
+		VeilManager.VeilTier.ABYSS:
+			veil_hud_label.add_theme_color_override("font_color", Color(0.85, 0.2, 0.2, 1.0))
+		VeilManager.VeilTier.VOID:
+			veil_hud_label.add_theme_color_override("font_color", Color(1.0, 0.0, 0.0, 1.0))
+
+
+func _update_talisman_hud() -> void:
+	if not talisman_hud_label:
+		return
+	var count: int = TalismanManager.get_talisman_count()
+	if count == 0:
+		talisman_hud_label.text = "Talismans: -"
+	else:
+		var names: Array = []
+		for t in TalismanManager.active_talismans:
+			names.append(t.talisman_name)
+		talisman_hud_label.text = "T: %s" % ", ".join(names)
 
 
 func _update_deck_display() -> void:

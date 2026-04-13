@@ -1,0 +1,140 @@
+{
+  "talismans": [
+    {
+      "talisman_id": "sage_bundle",
+      "talisman_name": "Sage Bundle",
+      "description": "-1 Veil after each reading",
+      "tier": "common",
+      "cost": 30,
+      "effect_id": "sage_bundle"
+    },
+    {
+      "talisman_id": "rose_quartz",
+      "talisman_name": "Rose Quartz",
+      "description": "Cups cards +3 Insight",
+      "tier": "common",
+      "cost": 25,
+      "effect_id": "rose_quartz"
+    },
+    {
+      "talisman_id": "iron_nail",
+      "talisman_name": "Iron Nail",
+      "description": "Swords cards +3 Insight",
+      "tier": "common",
+      "cost": 25,
+      "effect_id": "iron_nail"
+    },
+    {
+      "talisman_id": "beeswax_candle",
+      "talisman_name": "Beeswax Candle",
+      "description": "Wands chains count as 1 longer",
+      "tier": "common",
+      "cost": 30,
+      "effect_id": "beeswax_candle"
+    },
+    {
+      "talisman_id": "copper_coin",
+      "talisman_name": "Copper Coin",
+      "description": "Pentacles cards generate +2 gold each",
+      "tier": "common",
+      "cost": 25,
+      "effect_id": "copper_coin"
+    },
+    {
+      "talisman_id": "dried_lavender",
+      "talisman_name": "Dried Lavender",
+      "description": "6-numbered cards give -2 Veil instead of -1",
+      "tier": "common",
+      "cost": 30,
+      "effect_id": "dried_lavender"
+    },
+    {
+      "talisman_id": "quartz_point",
+      "talisman_name": "Quartz Point",
+      "description": "+2 Insight to first card in each row",
+      "tier": "common",
+      "cost": 20,
+      "effect_id": "quartz_point"
+    },
+    {
+      "talisman_id": "bone_dice",
+      "talisman_name": "Bone Dice",
+      "description": "+5 Resonance on a random card each reading",
+      "tier": "common",
+      "cost": 20,
+      "effect_id": "bone_dice"
+    },
+    {
+      "talisman_id": "red_thread",
+      "talisman_name": "Red Thread",
+      "description": "Adjacent same-suit cards gain +2 Insight each",
+      "tier": "common",
+      "cost": 25,
+      "effect_id": "red_thread"
+    },
+    {
+      "talisman_id": "wooden_rune",
+      "talisman_name": "Wooden Rune",
+      "description": "Court cards gain +3 Insight",
+      "tier": "common",
+      "cost": 25,
+      "effect_id": "wooden_rune"
+    },
+    {
+      "talisman_id": "obsidian_mirror",
+      "talisman_name": "Obsidian Mirror",
+      "description": "Reversed cards gain x2 Resonance (stacks with Veil bonus)",
+      "tier": "uncommon",
+      "cost": 60,
+      "effect_id": "obsidian_mirror"
+    },
+    {
+      "talisman_id": "book_of_shadows",
+      "talisman_name": "Book of Shadows",
+      "description": "Major Arcana cards +8 Resonance",
+      "tier": "uncommon",
+      "cost": 55,
+      "effect_id": "book_of_shadows"
+    },
+    {
+      "talisman_id": "mirror_shard",
+      "talisman_name": "Mirror Shard",
+      "description": "First reversed card each reading gives no Veil",
+      "tier": "uncommon",
+      "cost": 55,
+      "effect_id": "mirror_shard"
+    },
+    {
+      "talisman_id": "hex_bag",
+      "talisman_name": "Hex Bag",
+      "description": "5-numbered cards: +1 Veil but x2 Resonance",
+      "tier": "uncommon",
+      "cost": 50,
+      "effect_id": "hex_bag"
+    },
+    {
+      "talisman_id": "chalice",
+      "talisman_name": "Chalice",
+      "description": "If all suit cards are Cups, Cups chain Resonance x2",
+      "tier": "uncommon",
+      "cost": 55,
+      "effect_id": "chalice"
+    },
+    {
+      "talisman_id": "crystal_ball",
+      "talisman_name": "Crystal Ball",
+      "description": "Always see next 5 cards in draw pile",
+      "tier": "rare",
+      "cost": 100,
+      "effect_id": "crystal_ball"
+    },
+    {
+      "talisman_id": "black_mirror",
+      "talisman_name": "Black Mirror",
+      "description": "Veil 7+: all Resonance x3. Veil 4-6: x1.5",
+      "tier": "rare",
+      "cost": 110,
+      "effect_id": "black_mirror"
+    }
+  ]
+}

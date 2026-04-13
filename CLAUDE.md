@@ -11,9 +11,10 @@
 - **Repo:** github.com/BYGGOLDENSTONE/arcana-ludus
 
 ## Current Phase
-- **Phase:** Phase 4.5 (Placement Refactor) — COMPLETE
+- **Phase:** Phase 5 (Veil & Talismans) — IN PROGRESS
 - **Target:** Playable Steam Demo (Act I, full juice)
-- **Next Step:** Begin Phase 5 — Veil & Talismans
+- **Completed:** 5.1 Veil System, 5.2 Talisman Framework, 5.3 Demo Talismans (17)
+- **Next Step:** 5.4 Major Arcana Effects
 - **Upcoming:** Phase 6 — Juice & Polish
 
 ## Development Rules
@@ -58,12 +59,14 @@
 
 ## Architecture
 
-### Autoload Singletons (7)
+### Autoload Singletons (9)
 - `GameManager` — run state, current act/querent, lives, gold, reputation, night tracking
 - `DeckManager` — player deck, draw pile, discard, hand, sideboard (removed cards still owned)
-- `ScoreManager` — scoring engine with per-row partial scoring + full resolution (chains, combos)
-- `VeilManager` — Veil counter, tier tracking
-- `DataLoader` — loads card/spread/talisman/querent definitions
+- `ScoreManager` — scoring engine with per-row partial scoring + full resolution (chains, combos, Veil tier bonuses, talisman hooks)
+- `VeilManager` — Veil value 0-11, tier tracking (Clear/Glimpse/Gaze/Abyss/Void), card-based accumulation/reduction, target score adjustment, The Void death
+- `TalismanEffects` — defines all talisman effect hook callables (17 talismans implemented)
+- `TalismanManager` — active talismans (max 5), hook system (before_reading, on_card_place, on_score, on_chain, after_reading)
+- `DataLoader` — loads card/spread/talisman/querent definitions from JSON
 - `AudioManager` — SFX and music bus management
 - `EventBus` — global signal bus for cross-component communication
 
@@ -139,6 +142,11 @@ res://
 - **Shop between nights:** Card packs (buy Minor Arcana), deck management (remove/return via sideboard)
 - **Scenes:** GameScene (main entry) → ReadingScene (card placement) → ShopScene (between nights)
 
+## Known Bugs (Phase 4.5 Placement)
+- **3x3 spread slots show all at once** — should reveal row-by-row (Past first, then Present, then Future)
+- **Space confirm places only 1 card instead of 3** — all 3 selected cards should animate into the active row slots simultaneously
+- **General placement flow broken** — row-by-row reveal + 3-card batch placement needs debugging
+
 ## Demo Scope
 - 62 cards (22 Major Arcana + 40 Minor Arcana Ace-10, no Court cards)
 - 1 spread (3×3 Past/Present/Future grid)
@@ -159,8 +167,8 @@ res://
 - [x] Phase 2: Core Mechanics
 - [x] Phase 3: Game Loop
 - [x] Phase 4: Chains & Combos
-- [x] Phase 4.5: Placement Refactor (row-by-row click-select)
-- [ ] Phase 5: Veil & Talismans
+- [x] Phase 4.5: Placement Refactor (row-by-row click-select) — **HAS KNOWN BUGS, see below**
+- [~] Phase 5: Veil & Talismans (5.1 Veil, 5.2 Framework, 5.3 Talismans DONE — 5.4 Major Arcana Effects TODO)
 - [ ] Phase 6: Juice & Polish
 - [ ] Phase 7: Content & Balance
 - [ ] Phase 8: Demo Release Prep
