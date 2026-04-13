@@ -87,6 +87,11 @@ func set_locked() -> void:
 		modulate.a = 0.8
 
 
+func set_hidden() -> void:
+	is_active = false
+	modulate.a = 0.0
+
+
 func get_snap_position() -> Vector2:
 	return global_position
 

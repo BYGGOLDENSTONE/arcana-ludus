@@ -66,15 +66,24 @@ func _clear_slots() -> void:
 	slots.clear()
 
 
-func set_active_row(row: int) -> void:
+func set_active_row(row: int, animate: bool = false) -> void:
 	_active_row = row
 	for i in range(slots.size()):
 		var slot: Node2D = slots[i]
 		var slot_row: int = slot.position_data.row
 		if slot_row == row:
-			slot.set_active(true)
+			if animate and slot.modulate.a < 0.1:
+				slot.is_active = true
+				var tween := slot.create_tween()
+				tween.set_ease(Tween.EASE_OUT)
+				tween.set_trans(Tween.TRANS_CUBIC)
+				tween.tween_property(slot, "modulate:a", 1.0, 0.35)
+			else:
+				slot.set_active(true)
 		elif slot.is_occupied:
 			slot.set_locked()
+		elif slot_row > row:
+			slot.set_hidden()
 		else:
 			slot.set_active(false)
 
@@ -83,11 +92,17 @@ func set_active_row(row: int) -> void:
 	for r in range(labels.size()):
 		var label: Label = labels[r]
 		if r == row:
+			label.visible = true
+			if animate:
+				label.modulate.a = 0.0
+				var tween := label.create_tween()
+				tween.tween_property(label, "modulate:a", 1.0, 0.35)
 			label.add_theme_color_override("font_color", Color(0.90, 0.75, 0.30, 1.0))
 		elif r < row:
+			label.visible = true
 			label.add_theme_color_override("font_color", Color(0.50, 0.45, 0.35, 0.5))
 		else:
-			label.add_theme_color_override("font_color", Color(0.78, 0.70, 0.50, 0.7))
+			label.visible = false
 
 
 func place_cards_in_row(row: int, card_nodes: Array) -> void:

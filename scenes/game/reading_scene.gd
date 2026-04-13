@@ -149,17 +149,17 @@ func _confirm_placement() -> void:
 	if _current_phase == RowPhase.DONE:
 		return
 
-	var selected: Array = hand.get_selected_cards()
+	var selected: Array = hand.get_selected_cards().duplicate()
 	if selected.size() != CARDS_PER_ROW:
 		return
 
 	var row: int = int(_current_phase)
 
-	# Remove selected cards from hand (don't free them — spread takes ownership)
-	hand.remove_cards(selected)
-
-	# Place cards into the current row
+	# Place cards first (while still in hand, so global_position is correct for animation)
 	spread.place_cards_in_row(row, selected)
+
+	# Then remove from hand tracking (don't free — spread owns them now)
+	hand.remove_cards(selected)
 
 	# Lock the row
 	spread.lock_row(row)
@@ -269,11 +269,11 @@ func _advance_phase() -> void:
 	match _current_phase:
 		RowPhase.PAST:
 			_current_phase = RowPhase.PRESENT
-			spread.set_active_row(1)
+			spread.set_active_row(1, true)
 			_update_phase_display()
 		RowPhase.PRESENT:
 			_current_phase = RowPhase.FUTURE
-			spread.set_active_row(2)
+			spread.set_active_row(2, true)
 			_update_phase_display()
 		RowPhase.FUTURE:
 			_current_phase = RowPhase.DONE

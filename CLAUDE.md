@@ -142,11 +142,6 @@ res://
 - **Shop between nights:** Card packs (buy Minor Arcana), deck management (remove/return via sideboard)
 - **Scenes:** GameScene (main entry) → ReadingScene (card placement) → ShopScene (between nights)
 
-## Known Bugs (Phase 4.5 Placement)
-- **3x3 spread slots show all at once** — should reveal row-by-row (Past first, then Present, then Future)
-- **Space confirm places only 1 card instead of 3** — all 3 selected cards should animate into the active row slots simultaneously
-- **General placement flow broken** — row-by-row reveal + 3-card batch placement needs debugging
-
 ## Demo Scope
 - 62 cards (22 Major Arcana + 40 Minor Arcana Ace-10, no Court cards)
 - 1 spread (3×3 Past/Present/Future grid)
@@ -167,7 +162,7 @@ res://
 - [x] Phase 2: Core Mechanics
 - [x] Phase 3: Game Loop
 - [x] Phase 4: Chains & Combos
-- [x] Phase 4.5: Placement Refactor (row-by-row click-select) — **HAS KNOWN BUGS, see below**
+- [x] Phase 4.5: Placement Refactor (row-by-row click-select, row reveal + 3-card batch placement)
 - [~] Phase 5: Veil & Talismans (5.1 Veil, 5.2 Framework, 5.3 Talismans DONE — 5.4 Major Arcana Effects TODO)
 - [ ] Phase 6: Juice & Polish
 - [ ] Phase 7: Content & Balance
